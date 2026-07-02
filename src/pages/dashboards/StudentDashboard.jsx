@@ -1,10 +1,86 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Navigate } from 'react-router-dom';
-import { Trophy, Medal, Star, Target, MapPin } from 'lucide-react';
+import { Navigate, Link } from 'react-router-dom';
+import { Trophy, Medal, Star, Target, MapPin, Calendar, Activity, ArrowRight } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { motion } from 'framer-motion';
 
 const StudentDashboard = () => {
   const { role, profile, loading } = useAuth();
+  
+  const [myEvents, setMyEvents] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [bestRank, setBestRank] = useState({ air: '--', state: '--', district: '--' });
+
+  useEffect(() => {
+    if (role === 'student' && profile) {
+      fetchStudentData();
+    }
+  }, [role, profile]);
+
+  const fetchStudentData = async () => {
+    setDataLoading(true);
+    try {
+      console.log("Fetching for profile ID:", profile.id);
+      
+      // 1. Fetch Registrations
+      const { data: registrations, error: regError } = await supabase
+        .from('event_participants')
+        .select('*')
+        .eq('student_id', profile.id);
+
+      // 2. Fetch Events manually
+      const { data: allEvents, error: eventsError } = await supabase
+        .from('events')
+        .select('*');
+
+      // 3. Fetch Rankings manually
+      const { data: ranks, error: ranksError } = await supabase
+        .from('rankings')
+        .select('*')
+        .eq('student_id', profile.id);
+
+      // Combine them in JS to prevent any Supabase inner join failures
+      let highestAir = Infinity;
+      let highestState = Infinity;
+      let highestDistrict = Infinity;
+
+      const combinedEvents = (registrations || []).map(reg => {
+        const eventData = allEvents?.find(e => e.id === reg.event_id) || {};
+        const rankInfo = ranks?.find(r => r.event_id === reg.event_id);
+        
+        if (rankInfo) {
+          if (rankInfo.air_rank < highestAir) highestAir = rankInfo.air_rank;
+          if (rankInfo.state_rank < highestState) highestState = rankInfo.state_rank;
+          if (rankInfo.district_rank < highestDistrict) highestDistrict = rankInfo.district_rank;
+        }
+
+        return {
+          ...reg,
+          events: eventData,
+          rank: rankInfo || null
+        };
+      });
+
+      // Sort by registration date descending
+      combinedEvents.sort((a, b) => new Date(b.registration_date) - new Date(a.registration_date));
+
+      setMyEvents(combinedEvents);
+
+      if (highestAir !== Infinity) {
+        setBestRank({
+          air: highestAir,
+          state: highestState,
+          district: highestDistrict
+        });
+      }
+
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
   if (loading) return <div style={{ paddingTop: '100px', textAlign: 'center' }}>Loading...</div>;
   if (role !== 'student' || !profile) {
@@ -12,27 +88,38 @@ const StudentDashboard = () => {
       <div style={{ paddingTop: '120px', textAlign: 'center', minHeight: '100vh', backgroundColor: 'var(--bg-light)' }}>
         <h2 style={{ color: '#ef4444' }}>Unauthorized Access</h2>
         <p>You must be logged in as a registered Student to view this page.</p>
+        <Link to="/login" style={{ color: 'var(--primary-blue)', fontWeight: 'bold' }}>Login Here</Link>
       </div>
     );
   }
 
   return (
-    <div style={{ paddingTop: '80px', backgroundColor: 'var(--bg-light)', minHeight: '100vh' }}>
+    <div style={{ paddingTop: '80px', backgroundColor: 'var(--bg-light)', minHeight: '100vh', fontFamily: 'var(--font-body)' }}>
       
       {/* Student Profile Header */}
       <div style={{ backgroundColor: 'white', padding: '40px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
         <div className="container" style={{ display: 'flex', alignItems: 'center', gap: '30px' }}>
-          <img 
-            src={profile.photo_url || "https://randomuser.me/api/portraits/lego/1.jpg"} 
-            alt="Student Profile" 
-            style={{ width: '120px', height: '120px', borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--primary-light)', boxShadow: '0 10px 20px rgba(0,0,0,0.05)' }} 
-          />
+          <div style={{ position: 'relative' }}>
+            <img 
+              src={profile.photo_url || "https://randomuser.me/api/portraits/lego/1.jpg"} 
+              alt="Student Profile" 
+              style={{ width: '120px', height: '120px', borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--primary-light)', boxShadow: '0 10px 20px rgba(0,0,0,0.05)' }} 
+            />
+            {bestRank.air === 1 && (
+              <div style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: '#fbbf24', padding: '8px', borderRadius: '50%', border: '3px solid white' }}>
+                <Trophy size={20} style={{ color: 'white' }} />
+              </div>
+            )}
+          </div>
           <div>
-            <h1 style={{ fontFamily: 'var(--font-heading)', margin: '0 0 5px 0', fontSize: '32px', color: 'var(--text-dark)' }}>{profile.full_name}</h1>
-            <p style={{ margin: '0 0 10px 0', color: 'var(--primary-blue)', fontWeight: 'bold' }}>{profile.custom_student_id}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '5px' }}>
+              <h1 style={{ fontFamily: 'var(--font-heading)', margin: 0, fontSize: '32px', color: 'var(--text-dark)' }}>{profile.full_name}</h1>
+              <span style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary-blue)', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>Student Account</span>
+            </div>
+            <p style={{ margin: '0 0 10px 0', color: 'var(--primary-blue)', fontWeight: 'bold' }}>ID: {profile.custom_student_id}</p>
             <div style={{ display: 'flex', gap: '20px', fontSize: '14px', color: 'var(--text-light)' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><MapPin size={16}/> {profile.state}</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Target size={16}/> {profile.schools?.school_name || 'No School Linked'}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><MapPin size={16}/> {profile.district}, {profile.state}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Target size={16}/> {profile.schools?.school_name || 'Independent Participant'}</span>
             </div>
           </div>
         </div>
@@ -41,40 +128,105 @@ const StudentDashboard = () => {
       <div className="container" style={{ padding: '40px 0' }}>
         
         {/* Global Rankings Overview */}
-        <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '20px', marginBottom: '20px' }}>Live Ranking Overview</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '20px' }}>
+          <div>
+            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '24px', margin: '0 0 5px 0' }}>Personal Best Ranks</h2>
+            <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>Your highest achievements across all participated events.</p>
+          </div>
+        </div>
         
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '40px' }}>
-          <div style={{ backgroundColor: 'var(--primary-dark)', color: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 10px 30px rgba(15, 23, 42, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '50px' }}>
+          <motion.div whileHover={{ y: -5 }} style={{ backgroundColor: 'var(--primary-dark)', color: 'white', padding: '25px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(15, 23, 42, 0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <p style={{ margin: '0 0 5px 0', fontSize: '14px', textTransform: 'uppercase', fontWeight: 'bold', color: 'var(--accent-orange)' }}>All India Rank</p>
-              <h3 style={{ margin: 0, fontSize: '32px', fontFamily: 'var(--font-heading)' }}># --</h3>
+              <p style={{ margin: '0 0 5px 0', fontSize: '12px', textTransform: 'uppercase', fontWeight: 'bold', color: 'var(--accent-orange)', letterSpacing: '1px' }}>All India Rank</p>
+              <h3 style={{ margin: 0, fontSize: '36px', fontFamily: 'var(--font-heading)' }}>#{bestRank.air}</h3>
             </div>
-            <Trophy size={48} style={{ opacity: 0.3 }} />
-          </div>
+            <Trophy size={48} style={{ opacity: 0.2 }} />
+          </motion.div>
           
-          <div style={{ backgroundColor: '#10b981', color: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 10px 30px rgba(16, 185, 129, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <motion.div whileHover={{ y: -5 }} style={{ backgroundColor: '#10b981', color: 'white', padding: '25px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(16, 185, 129, 0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <p style={{ margin: '0 0 5px 0', fontSize: '14px', textTransform: 'uppercase', fontWeight: 'bold', color: 'rgba(255,255,255,0.7)' }}>State Rank</p>
-              <h3 style={{ margin: 0, fontSize: '32px', fontFamily: 'var(--font-heading)' }}># --</h3>
+              <p style={{ margin: '0 0 5px 0', fontSize: '12px', textTransform: 'uppercase', fontWeight: 'bold', color: 'rgba(255,255,255,0.7)', letterSpacing: '1px' }}>State Rank</p>
+              <h3 style={{ margin: 0, fontSize: '36px', fontFamily: 'var(--font-heading)' }}>#{bestRank.state}</h3>
             </div>
-            <Medal size={48} style={{ opacity: 0.3 }} />
-          </div>
+            <Medal size={48} style={{ opacity: 0.2 }} />
+          </motion.div>
 
-          <div style={{ backgroundColor: '#f59e0b', color: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 10px 30px rgba(245, 158, 11, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <motion.div whileHover={{ y: -5 }} style={{ backgroundColor: '#f59e0b', color: 'white', padding: '25px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(245, 158, 11, 0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <p style={{ margin: '0 0 5px 0', fontSize: '14px', textTransform: 'uppercase', fontWeight: 'bold', color: 'rgba(255,255,255,0.7)' }}>District Rank</p>
-              <h3 style={{ margin: 0, fontSize: '32px', fontFamily: 'var(--font-heading)' }}># --</h3>
+              <p style={{ margin: '0 0 5px 0', fontSize: '12px', textTransform: 'uppercase', fontWeight: 'bold', color: 'rgba(255,255,255,0.7)', letterSpacing: '1px' }}>District Rank</p>
+              <h3 style={{ margin: 0, fontSize: '36px', fontFamily: 'var(--font-heading)' }}>#{bestRank.district}</h3>
             </div>
-            <Star size={48} style={{ opacity: 0.3 }} />
-          </div>
+            <Star size={48} style={{ opacity: 0.2 }} />
+          </motion.div>
         </div>
 
         {/* Participated Events */}
-        <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
-          <div style={{ borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: '15px', marginBottom: '20px' }}>
-            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '20px', margin: 0 }}>My Events</h2>
+        <div style={{ backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', overflow: 'hidden' }}>
+          <div style={{ padding: '25px 30px', borderBottom: '1px solid rgba(0,0,0,0.05)', backgroundColor: '#fafafa' }}>
+            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '20px', margin: 0, color: 'var(--text-dark)' }}>My Competitions & Live Ranks</h2>
           </div>
-          <p style={{ color: 'var(--text-light)', fontSize: '14px' }}>You haven't participated in any events yet. Check out the Programs tab to register for upcoming competitions!</p>
+          
+          {dataLoading ? (
+            <div style={{ padding: '50px', textAlign: 'center', color: '#64748b' }}>Syncing your records...</div>
+          ) : myEvents.length === 0 ? (
+            <div style={{ padding: '60px 30px', textAlign: 'center' }}>
+              <Calendar size={48} style={{ color: '#cbd5e1', margin: '0 auto 15px auto' }} />
+              <h3 style={{ fontSize: '18px', color: 'var(--text-dark)', margin: '0 0 10px 0' }}>No Events Yet</h3>
+              <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px' }}>You haven't participated in any events yet.</p>
+              <Link to="/events" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', backgroundColor: 'var(--primary-blue)', color: 'white', borderRadius: '8px', textDecoration: 'none', fontWeight: 'bold' }}>
+                Browse Upcoming Events <ArrowRight size={16} />
+              </Link>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '700px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: 'white', color: '#94a3b8', fontSize: '12px', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Competition Details</th>
+                    <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Performance Score</th>
+                    <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>All India Rank</th>
+                    <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>State Rank</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {myEvents.map((event) => (
+                    <tr key={event.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '20px 30px' }}>
+                        <div style={{ fontWeight: 'bold', color: 'var(--text-dark)', fontSize: '15px' }}>{event.events?.name || 'Unknown Event'}</div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px', textTransform: 'capitalize' }}>
+                          {event.events?.sport_category || 'General'} • {event.events ? new Date(event.events.event_date).toLocaleDateString() : 'N/A'}
+                        </div>
+                      </td>
+                      <td style={{ padding: '20px 30px' }}>
+                        {event.rank ? (
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: '#eff6ff', padding: '6px 12px', borderRadius: '8px', color: 'var(--primary-blue)', fontWeight: 'bold' }}>
+                            <Activity size={16} /> {event.rank.metric_value}
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '13px', color: '#94a3b8', backgroundColor: '#f8fafc', padding: '6px 12px', borderRadius: '8px' }}>Pending Evaluation</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '20px 30px' }}>
+                        {event.rank ? (
+                          <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-orange)' }}>#{event.rank.air_rank}</span>
+                        ) : (
+                          <span style={{ color: '#cbd5e1' }}>--</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '20px 30px' }}>
+                        {event.rank ? (
+                          <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#10b981' }}>#{event.rank.state_rank}</span>
+                        ) : (
+                          <span style={{ color: '#cbd5e1' }}>--</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
       </div>
