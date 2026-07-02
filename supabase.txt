@@ -1,0 +1,248 @@
+-- ==============================================================================
+-- AMAZING KIDS OF INDIA - SUPABASE MASTER SCHEMA
+-- INSTRUCTIONS: Copy this entire file and run it in the Supabase SQL Editor.
+-- ==============================================================================
+
+-- Enable UUID extension if not already enabled
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ==========================================
+-- 1. CUSTOM TYPES & SEQUENCES
+-- ==========================================
+CREATE TYPE event_type_enum AS ENUM ('TIME', 'SCORE', 'DISTANCE', 'POINTS');
+CREATE TYPE event_status_enum AS ENUM ('DRAFT', 'PUBLISHED');
+
+CREATE SEQUENCE IF NOT EXISTS school_id_seq START 10000;
+CREATE SEQUENCE IF NOT EXISTS student_id_seq START 10000;
+
+-- ==========================================
+-- 2. TABLES
+     auth_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+    email TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL DEFAULT 'Super Admin',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- D. Events Table
+-- ALTER TABLE public.events ADD COLUMN sport_category TEXT;
+CREATE TABLE public.events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    sport_category TEXT,
+    logo_url TEXT,
+    description TEXT,
+    event_date DATE NOT NULL,
+    venue TEXT NOT NULL,
+    age_category TEXT NOT NULL,
+    reg_start_date DATE NOT NULL,
+    reg_end_date DATE NOT NULL,
+    max_attempts INT DEFAULT 1,
+    rules TEXT,
+    event_type event_type_enum NOT NULL, -- Defines ranking algorithm
+    status event_status_enum DEFAULT 'DRAFT',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- E. Event Participants (Registration)
+CREATE TABLE public.event_participants (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_id UUID REFERENCES public.events(id) ON DELETE CASCADE,
+    student_id UUID REFERENCES public.students(id) ON DELETE CASCADE,
+    reg_date DATE DEFAULT CURRENT_DATE,
+    reg_time TIME DEFAULT CURRENT_TIME,
+    status TEXT DEFAULT 'REGISTERED',
+    UNIQUE(event_id, student_id) -- Prevent double registration
+);
+
+-- F. Performances
+CREATE TABLE public.performances (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_id UUID REFERENCES public.events(id) ON DELETE CASCADE,
+    student_id UUID REFERENCES public.students(id) ON DELETE CASCADE,
+    metric_value NUMERIC NOT NULL, -- Represents seconds, points, etc.
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(event_id, student_id) -- One active performance per student per event
+);
+
+-- G. Rankings (Auto-calculated via Trigger)
+CREATE TABLE public.rankings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_id UUID REFERENCES public.events(id) ON DELETE CASCADE,
+    student_id UUID REFERENCES public.students(id) ON DELETE CASCADE,
+    performance_id UUID REFERENCES public.performances(id) ON DELETE CASCADE,
+    metric_value NUMERIC NOT NULL,
+    air_rank INT NOT NULL,
+    state_rank INT NOT NULL,
+    district_rank INT NOT NULL,
+    last_calculated TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(event_id, student_id)
+);
+
+
+-- ==========================================
+-- 3. TRIGGERS FOR AUTO-GENERATED IDs
+-- ==========================================
+
+-- Generate SCH ID
+CREATE OR REPLACE FUNCTION generate_school_id() RETURNS TRIGGER AS $$
+BEGIN
+    NEW.custom_school_id := 'SCH' || LPAD(nextval('school_id_seq')::text, 6, '0');
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_generate_school_id
+BEFORE INSERT ON public.schools
+FOR EACH ROW EXECUTE FUNCTION generate_school_id();
+
+-- Generate AKI Student ID (Format: AKI + Year + Sequence)
+CREATE OR REPLACE FUNCTION generate_student_id() RETURNS TRIGGER AS $$
+BEGIN
+    NEW.custom_student_id := 'AKI' || TO_CHAR(CURRENT_DATE, 'YYYY') || LPAD(nextval('student_id_seq')::text, 5, '0');
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_generate_student_id
+BEFORE INSERT ON public.students
+FOR EACH ROW EXECUTE FUNCTION generate_student_id();
+
+
+-- ==========================================
+-- 4. AUTOMATED RANKING ENGINE (THE CORE LOGIC)
+-- ==========================================
+-- This function recalculates AIR, State, and District ranks for an entire event
+-- whenever a performance is added or updated.
+
+CREATE OR REPLACE FUNCTION recalculate_event_rankings() RETURNS TRIGGER AS $$
+DECLARE
+    v_event_type event_type_enum;
+BEGIN
+    -- Determine the sorting order based on event type
+    SELECT event_type INTO v_event_type FROM public.events WHERE id = NEW.event_id;
+
+    -- Clear existing rankings for this event (we will rebuild them instantly)
+    DELETE FROM public.rankings WHERE event_id = NEW.event_id;
+
+    -- Insert newly calculated rankings for ALL participants in this event
+    INSERT INTO public.rankings (event_id, student_id, performance_id, metric_value, air_rank, state_rank, district_rank)
+    SELECT 
+        p.event_id,
+        p.student_id,
+        p.id AS performance_id,
+        p.metric_value,
+        -- Calculate All India Rank (AIR)
+        RANK() OVER (
+            ORDER BY 
+                CASE WHEN v_event_type = 'TIME' THEN p.metric_value END ASC,
+                CASE WHEN v_event_type != 'TIME' THEN p.metric_value END DESC
+        ) AS air_rank,
+        -- Calculate State Rank
+        RANK() OVER (
+            PARTITION BY s.state 
+            ORDER BY 
+                CASE WHEN v_event_type = 'TIME' THEN p.metric_value END ASC,
+                CASE WHEN v_event_type != 'TIME' THEN p.metric_value END DESC
+        ) AS state_rank,
+        -- Calculate District Rank
+        RANK() OVER (
+            PARTITION BY s.state, s.district 
+            ORDER BY 
+                CASE WHEN v_event_type = 'TIME' THEN p.metric_value END ASC,
+                CASE WHEN v_event_type != 'TIME' THEN p.metric_value END DESC
+        ) AS district_rank
+    FROM public.performances p
+    JOIN public.students s ON p.student_id = s.id
+    WHERE p.event_id = NEW.event_id;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to recalculate on performance insert/update
+CREATE TRIGGER trg_recalculate_rankings
+AFTER INSERT OR UPDATE ON public.performances
+FOR EACH ROW EXECUTE FUNCTION recalculate_event_rankings();
+
+
+-- ==========================================
+-- 5. ROW LEVEL SECURITY (RLS)
+-- ==========================================
+
+-- Enable RLS on all tables
+ALTER TABLE public.schools ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.event_participants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.performances ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.rankings ENABLE ROW LEVEL SECURITY;
+
+-- A. Schools Policies
+-- Schools can read their own profile
+CREATE POLICY "Schools can view own profile" ON public.schools 
+FOR SELECT USING (auth.uid() = auth_id);
+-- Public can read basic school info (needed for student registration dropdown)
+CREATE POLICY "Anyone can view schools" ON public.schools FOR SELECT USING (true);
+-- Schools can insert their own profile during registration
+CREATE POLICY "Schools can insert own profile" ON public.schools 
+FOR INSERT WITH CHECK (auth.uid() = auth_id);
+-- Schools can update their own profile
+CREATE POLICY "Schools can update own profile" ON public.schools 
+FOR UPDATE USING (auth.uid() = auth_id);
+
+-- B. Students Policies
+-- Students can read their own profile
+CREATE POLICY "Students can view own profile" ON public.students 
+FOR SELECT USING (auth.uid() = auth_id);
+-- Schools can read their own students
+CREATE POLICY "Schools can view own students" ON public.students 
+FOR SELECT USING (school_id IN (SELECT id FROM public.schools WHERE auth_id = auth.uid()));
+-- Public read access for Admin Hardcode Bypass
+CREATE POLICY "Anyone can view students" ON public.students FOR SELECT USING (true);
+-- Students can insert their own profile during registration
+CREATE POLICY "Students can insert own profile" ON public.students 
+FOR INSERT WITH CHECK (auth.uid() = auth_id);
+-- Students can update their own profile
+CREATE POLICY "Students can update own profile" ON public.students 
+FOR UPDATE USING (auth.uid() = auth_id);
+
+-- C. Events & Rankings Policies
+-- Anyone can view published events and rankings
+CREATE POLICY "Anyone can view events" ON public.events FOR SELECT USING (true);
+CREATE POLICY "Anyone can view rankings" ON public.rankings FOR SELECT USING (true);
+-- Public insert access for Admin Hardcode Bypass
+CREATE POLICY "Anyone can create events" ON public.events FOR INSERT WITH CHECK (true);
+
+-- D. Event Participants Policies
+-- Students can view their own registrations
+CREATE POLICY "Students can view own registrations" ON public.event_participants 
+FOR SELECT USING (student_id IN (SELECT id FROM public.students WHERE auth_id = auth.uid()));
+-- Students can register themselves
+CREATE POLICY "Students can register for events" ON public.event_participants 
+FOR INSERT WITH CHECK (student_id IN (SELECT id FROM public.students WHERE auth_id = auth.uid()));
+
+
+-- ==========================================
+-- 6. SUPER ADMIN BYPASS
+-- ==========================================
+-- In Supabase, the best way to handle Super Admin is using a Database Function 
+-- to check if the current user is an admin, and then grant RLS bypass.
+-- For simplicity, since Super Admin is manual, we can create policies for it.
+
+CREATE OR REPLACE FUNCTION is_admin() RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (SELECT 1 FROM public.super_admin WHERE auth_id = auth.uid());
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Add Admin policies
+CREATE POLICY "Admin full access schools" ON public.schools FOR ALL USING (is_admin());
+CREATE POLICY "Admin full access students" ON public.students FOR ALL USING (is_admin());
+CREATE POLICY "Admin full access events" ON public.events FOR ALL USING (is_admin());
+CREATE POLICY "Admin full access participants" ON public.event_participants FOR ALL USING (is_admin());
+CREATE POLICY "Admin full access performances" ON public.performances FOR ALL USING (is_admin());
+
+-- ==============================================================================
+-- END OF SCHEMA
+-- ==============================================================================
