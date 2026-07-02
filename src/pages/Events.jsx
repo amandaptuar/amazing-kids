@@ -1,16 +1,36 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
-import { Calendar, MapPin, Trophy, Users, Clock, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Calendar, MapPin, Trophy, Users, Clock, CheckCircle, AlertCircle, X } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Events = () => {
+  const { user, role, profile } = useAuth();
+  const navigate = useNavigate();
+  
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [myRegistrations, setMyRegistrations] = useState([]);
+  const [registeringId, setRegisteringId] = useState(null);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
 
   useEffect(() => {
     fetchEvents();
-  }, []);
+    if (role === 'student' && profile?.id) {
+      fetchMyRegistrations();
+    }
+  }, [role, profile]);
+
+  const fetchMyRegistrations = async () => {
+    const { data } = await supabase
+      .from('event_participants')
+      .select('event_id')
+      .eq('student_id', profile.id);
+      
+    if (data) {
+      setMyRegistrations(data.map(r => r.event_id));
+    }
+  };
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -36,8 +56,79 @@ const Events = () => {
     return now >= startDate && now < endDate;
   };
 
+  const handleRegisterClick = async (eventId) => {
+    if (!user) {
+      setShowLoginPopup(true);
+      return;
+    }
+    
+    if (role !== 'student') {
+      alert("Only Student accounts can register for competitions. Please login with a student account.");
+      return;
+    }
+
+    setRegisteringId(eventId);
+    try {
+      const { error } = await supabase.from('event_participants').insert({
+        event_id: eventId,
+        student_id: profile.id
+      });
+      
+      if (error) {
+        if (error.code === '23505') throw new Error('You are already registered for this event!');
+        throw error;
+      }
+      
+      alert("Successfully Registered for the Event! 🎉");
+      setMyRegistrations([...myRegistrations, eventId]);
+    } catch (err) {
+      alert(err.message || "An error occurred while registering.");
+    } finally {
+      setRegisteringId(null);
+    }
+  };
+
   return (
     <main style={{ backgroundColor: '#f8fafc', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'var(--font-body)' }}>
+      
+      {/* Login Popup Modal */}
+      <AnimatePresence>
+        {showLoginPopup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', backdropFilter: 'blur(5px)' }}
+            onClick={() => setShowLoginPopup(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ backgroundColor: 'white', padding: '40px', borderRadius: '24px', maxWidth: '400px', width: '100%', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.2)', position: 'relative' }}
+            >
+              <button onClick={() => setShowLoginPopup(false)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
+                <X size={24} />
+              </button>
+              <div style={{ width: '70px', height: '70px', backgroundColor: '#eff6ff', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto 20px auto' }}>
+                <AlertCircle size={32} style={{ color: 'var(--primary-blue)' }} />
+              </div>
+              <h2 style={{ fontFamily: 'var(--font-heading)', margin: '0 0 10px 0', fontSize: '24px', color: 'var(--text-dark)' }}>Login Required</h2>
+              <p style={{ color: '#64748b', fontSize: '15px', marginBottom: '30px', lineHeight: '1.6' }}>You must be logged into a Student account to register for competitions.</p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button onClick={() => navigate('/login')} style={{ padding: '14px', backgroundColor: 'var(--primary-blue)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)' }}>
+                  Login to Account
+                </button>
+                <button onClick={() => navigate('/register/student')} style={{ padding: '14px', backgroundColor: '#f1f5f9', color: 'var(--primary-dark)', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>
+                  Create Student Account
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       {/* Hero Section */}
       <section style={{
@@ -168,21 +259,26 @@ const Events = () => {
                           <strong>Window:</strong> {new Date(ev.reg_start_date).toLocaleDateString()} - {new Date(ev.reg_end_date).toLocaleDateString()}
                         </div>
 
-                        {ev.sport_category ? (
-                          <Link 
-                            to={`/program/${ev.sport_category}`} 
-                            style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', width: '100%', padding: '14px', backgroundColor: 'var(--primary-blue)', color: 'white', textDecoration: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '15px', transition: 'background-color 0.2s', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)' }}
-                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-blue)'}
-                          >
-                            View Live Rankings <ArrowRight size={18} />
-                          </Link>
-                        ) : (
+                        {myRegistrations.includes(ev.id) ? (
+                          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', width: '100%', padding: '14px', backgroundColor: '#dcfce7', color: '#16a34a', borderRadius: '12px', fontWeight: 'bold', fontSize: '15px', border: '1px solid #bbf7d0' }}>
+                            <CheckCircle size={18} /> Registered Successfully
+                          </div>
+                        ) : !regOpen ? (
                           <button 
                             disabled
-                            style={{ width: '100%', padding: '14px', backgroundColor: '#e2e8f0', color: '#94a3b8', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '15px', cursor: 'not-allowed' }}
+                            style={{ width: '100%', padding: '14px', backgroundColor: '#f1f5f9', color: '#94a3b8', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '15px', cursor: 'not-allowed' }}
                           >
-                            No Rankings Available
+                            Registration Closed
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => handleRegisterClick(ev.id)}
+                            disabled={registeringId === ev.id}
+                            style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', width: '100%', padding: '14px', backgroundColor: 'var(--accent-orange)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '15px', cursor: registeringId === ev.id ? 'wait' : 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 15px rgba(249, 115, 22, 0.3)' }}
+                            onMouseOver={(e) => { if(registeringId !== ev.id) e.currentTarget.style.backgroundColor = '#ea580c'; }}
+                            onMouseOut={(e) => { if(registeringId !== ev.id) e.currentTarget.style.backgroundColor = 'var(--accent-orange)'; }}
+                          >
+                            {registeringId === ev.id ? 'Processing...' : 'Register for Event'}
                           </button>
                         )}
                       </div>

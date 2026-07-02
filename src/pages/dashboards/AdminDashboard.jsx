@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Users, Building, Calendar, Trophy, Lock, Search, ChevronRight, PlusCircle, LayoutDashboard, Settings } from 'lucide-react';
+import { Users, Building, Calendar, Trophy, Lock, Search, ChevronRight, PlusCircle, LayoutDashboard, Settings, ArrowLeft, Save, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -22,6 +22,13 @@ const AdminDashboard = () => {
     name: '', date: '', venue: '', age_category: '', type: 'TIME',
     sport_category: '', reg_start: '', reg_end: ''
   });
+
+  // Scoring System State
+  const [scoringEvent, setScoringEvent] = useState(null); // holds the selected event object
+  const [participants, setParticipants] = useState([]);
+  const [scores, setScores] = useState({}); // { studentId: scoreValue }
+  const [savingScore, setSavingScore] = useState(null); // studentId being saved
+  const [savedStatus, setSavedStatus] = useState({}); // { studentId: true }
 
   useEffect(() => {
     if (role === 'admin') {
@@ -46,15 +53,8 @@ const AdminDashboard = () => {
     const { data: eventsData } = await supabase.from('events').select('*').order('created_at', { ascending: false });
     if (eventsData) setEvents(eventsData);
 
-    // Fetch Students Data (with linked school info)
-    const { data: studentsData } = await supabase.from('students').select(`
-      *,
-      schools (
-        school_name,
-        custom_school_id
-      )
-    `).order('created_at', { ascending: false });
-    
+    // Fetch Students Data
+    const { data: studentsData } = await supabase.from('students').select(`*, schools (school_name, custom_school_id)`).order('created_at', { ascending: false });
     if (studentsData) setStudents(studentsData);
     
     setDataLoading(false);
@@ -81,7 +81,7 @@ const AdminDashboard = () => {
       alert("Event created successfully!");
       setShowEventForm(false);
       setEventData({ name: '', date: '', venue: '', age_category: '', type: 'TIME', sport_category: '', reg_start: '', reg_end: '' });
-      fetchDashboardData(); // Refresh list
+      fetchDashboardData();
     } catch (err) {
       alert("Error creating event: " + err.message + "\n\nPlease ensure you ran the RLS SQL fix for events.");
     } finally {
@@ -89,11 +89,82 @@ const AdminDashboard = () => {
     }
   };
 
+  // --- SCORING SYSTEM LOGIC ---
+  const handleOpenScoring = async (ev) => {
+    setScoringEvent(ev);
+    setDataLoading(true);
+    
+    // Fetch participants joined with students & schools
+    const { data: partData } = await supabase
+      .from('event_participants')
+      .select(`
+        student_id,
+        students (
+          full_name,
+          custom_student_id,
+          schools ( school_name )
+        )
+      `)
+      .eq('event_id', ev.id);
+
+    // Fetch existing performances for this event
+    const { data: perfData } = await supabase
+      .from('performances')
+      .select('student_id, metric_value')
+      .eq('event_id', ev.id);
+
+    if (partData) {
+      setParticipants(partData);
+      
+      // Map existing scores into state
+      const initialScores = {};
+      if (perfData) {
+        perfData.forEach(p => {
+          initialScores[p.student_id] = p.metric_value;
+        });
+      }
+      setScores(initialScores);
+      setSavedStatus({});
+    }
+    
+    setDataLoading(false);
+  };
+
+  const handleSaveScore = async (studentId) => {
+    const value = scores[studentId];
+    if (!value) {
+      alert("Please enter a valid score/time.");
+      return;
+    }
+
+    setSavingScore(studentId);
+    try {
+      const { error } = await supabase
+        .from('performances')
+        .upsert({
+          event_id: scoringEvent.id,
+          student_id: studentId,
+          metric_value: parseFloat(value)
+        }, { onConflict: 'event_id,student_id' });
+
+      if (error) throw error;
+      
+      setSavedStatus(prev => ({ ...prev, [studentId]: true }));
+      setTimeout(() => {
+        setSavedStatus(prev => ({ ...prev, [studentId]: false }));
+      }, 3000);
+      
+    } catch (err) {
+      alert("Error saving score: " + err.message + "\nDid you run the SQL bypass for performances?");
+    } finally {
+      setSavingScore(null);
+    }
+  };
+
+
   if (loading) return <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}><div className="loader"></div></div>;
   
-  if (role !== 'admin') {
-    return <AdminLogin forceAdminLogin={forceAdminLogin} />;
-  }
+  if (role !== 'admin') return <AdminLogin forceAdminLogin={forceAdminLogin} />;
 
   const statCards = [
     { title: 'Registered Students', value: stats.students, icon: <Users size={28} style={{ color: '#fff' }}/>, bg: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', shadow: 'rgba(59, 130, 246, 0.3)' },
@@ -128,22 +199,13 @@ const AdminDashboard = () => {
           ].map(tab => (
             <li key={tab.id} style={{ marginBottom: '8px' }}>
               <button 
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => { setActiveTab(tab.id); setScoringEvent(null); }}
                 style={{ 
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '14px 15px', 
-                  cursor: 'pointer', 
+                  width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 15px', cursor: 'pointer', 
                   backgroundColor: activeTab === tab.id ? 'var(--primary-blue)' : 'transparent',
                   color: activeTab === tab.id ? 'white' : '#64748b',
-                  border: 'none',
-                  borderRadius: '12px',
-                  fontSize: '15px',
-                  fontWeight: activeTab === tab.id ? '600' : '500',
-                  transition: 'all 0.2s ease',
-                  textAlign: 'left'
+                  border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: activeTab === tab.id ? '600' : '500',
+                  transition: 'all 0.2s ease', textAlign: 'left'
                 }}
                 onMouseOver={(e) => { if(activeTab !== tab.id) e.currentTarget.style.backgroundColor = '#f1f5f9'; }}
                 onMouseOut={(e) => { if(activeTab !== tab.id) e.currentTarget.style.backgroundColor = 'transparent'; }}
@@ -159,9 +221,10 @@ const AdminDashboard = () => {
 
       {/* Main Content Area */}
       <div style={{ flex: 1, padding: '40px 50px', marginLeft: '280px' }}>
+        
+        {/* Header Bar */}
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', backgroundColor: 'white', padding: '20px 30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}
         >
           <div>
@@ -171,8 +234,7 @@ const AdminDashboard = () => {
             <p style={{ margin: '5px 0 0 0', color: '#64748b', fontSize: '14px' }}>Real-time statistics and administrative controls.</p>
           </div>
           <button 
-            onClick={fetchDashboardData} 
-            disabled={dataLoading}
+            onClick={fetchDashboardData} disabled={dataLoading}
             style={{ padding: '10px 20px', backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e2e8f0'}
             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
@@ -188,22 +250,13 @@ const AdminDashboard = () => {
           </div>
         ) : (
           <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 10 }}
-              transition={{ duration: 0.2 }}
-            >
+            <motion.div key={activeTab + (scoringEvent ? 'scoring' : '')} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.2 }}>
+              
               {/* OVERVIEW TAB */}
               {activeTab === 'overview' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
                   {statCards.map((stat, idx) => (
-                    <motion.div 
-                      whileHover={{ y: -5 }}
-                      key={idx} 
-                      style={{ background: 'white', padding: '30px', borderRadius: '20px', boxShadow: `0 10px 30px ${stat.shadow}`, position: 'relative', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.8)' }}
-                    >
+                    <motion.div whileHover={{ y: -5 }} key={idx} style={{ background: 'white', padding: '30px', borderRadius: '20px', boxShadow: `0 10px 30px ${stat.shadow}`, position: 'relative', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.8)' }}>
                       <div style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
                           <p style={{ margin: '0 0 10px 0', color: '#64748b', fontSize: '15px', fontWeight: '600' }}>{stat.title}</p>
@@ -223,10 +276,6 @@ const AdminDashboard = () => {
                 <div style={{ backgroundColor: 'white', borderRadius: '20px', boxShadow: '0 10px 40px rgba(0,0,0,0.03)', overflow: 'hidden', border: '1px solid #f1f5f9' }}>
                   <div style={{ padding: '25px 30px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fafafa' }}>
                     <h3 style={{ margin: 0, color: 'var(--text-dark)', fontSize: '18px' }}>Registered Students</h3>
-                    <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'white', padding: '8px 15px', borderRadius: '10px', border: '1px solid #e2e8f0', width: '250px' }}>
-                      <Search size={16} style={{ color: '#94a3b8', marginRight: '10px' }} />
-                      <input type="text" placeholder="Search ID or Name..." style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '14px' }} />
-                    </div>
                   </div>
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -243,12 +292,10 @@ const AdminDashboard = () => {
                           <tr><td colSpan="4" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No students found in the database.</td></tr>
                         ) : (
                           students.map(s => (
-                            <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.2s' }} onMouseOver={e => e.currentTarget.style.backgroundColor='#f8fafc'} onMouseOut={e => e.currentTarget.style.backgroundColor='white'}>
+                            <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                               <td style={{ padding: '20px 30px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--primary-blue)', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '16px' }}>
-                                    {s.full_name.charAt(0)}
-                                  </div>
+                                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--primary-blue)', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold' }}>{s.full_name.charAt(0)}</div>
                                   <div>
                                     <div style={{ fontWeight: 'bold', color: 'var(--text-dark)', fontSize: '15px' }}>{s.full_name}</div>
                                     <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>ID: {s.custom_student_id} • {s.gender}</div>
@@ -267,7 +314,7 @@ const AdminDashboard = () => {
                                 <div style={{ fontWeight: '500', color: 'var(--text-dark)', fontSize: '14px' }}>{s.district}</div>
                                 <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>{s.state}</div>
                               </td>
-                              <td style={{ padding: '20px 30px', fontSize: '14px', color: '#64748b' }}>{new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                              <td style={{ padding: '20px 30px', fontSize: '14px', color: '#64748b' }}>{new Date(s.created_at).toLocaleDateString()}</td>
                             </tr>
                           ))
                         )}
@@ -282,10 +329,6 @@ const AdminDashboard = () => {
                 <div style={{ backgroundColor: 'white', borderRadius: '20px', boxShadow: '0 10px 40px rgba(0,0,0,0.03)', overflow: 'hidden', border: '1px solid #f1f5f9' }}>
                   <div style={{ padding: '25px 30px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fafafa' }}>
                     <h3 style={{ margin: 0, color: 'var(--text-dark)', fontSize: '18px' }}>Registered Institutions</h3>
-                    <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'white', padding: '8px 15px', borderRadius: '10px', border: '1px solid #e2e8f0', width: '250px' }}>
-                      <Search size={16} style={{ color: '#94a3b8', marginRight: '10px' }} />
-                      <input type="text" placeholder="Search schools..." style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '14px' }} />
-                    </div>
                   </div>
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -294,38 +337,16 @@ const AdminDashboard = () => {
                           <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Institution Details</th>
                           <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Principal Contact</th>
                           <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Location</th>
-                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Joined Date</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {schools.length === 0 ? (
-                          <tr><td colSpan="4" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No schools found in the database.</td></tr>
-                        ) : (
-                          schools.map(s => (
-                            <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.2s' }} onMouseOver={e => e.currentTarget.style.backgroundColor='#f8fafc'} onMouseOut={e => e.currentTarget.style.backgroundColor='white'}>
-                              <td style={{ padding: '20px 30px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#fee2e2', color: '#ef4444', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold' }}>
-                                    <Building size={20} />
-                                  </div>
-                                  <div>
-                                    <div style={{ fontWeight: 'bold', color: 'var(--text-dark)', fontSize: '15px' }}>{s.school_name}</div>
-                                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>ID: {s.custom_school_id}</div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td style={{ padding: '20px 30px' }}>
-                                <div style={{ fontWeight: '500', color: 'var(--text-dark)', fontSize: '14px' }}>{s.principal_name}</div>
-                                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>{s.email}</div>
-                              </td>
-                              <td style={{ padding: '20px 30px' }}>
-                                <div style={{ fontWeight: '500', color: 'var(--text-dark)', fontSize: '14px' }}>{s.district}</div>
-                                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>{s.state}</div>
-                              </td>
-                              <td style={{ padding: '20px 30px', fontSize: '14px', color: '#64748b' }}>{new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
-                            </tr>
-                          ))
-                        )}
+                        {schools.map(s => (
+                          <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '20px 30px', fontWeight: 'bold' }}>{s.school_name}</td>
+                            <td style={{ padding: '20px 30px' }}>{s.principal_name} <br/><span style={{fontSize:'12px', color:'gray'}}>{s.email}</span></td>
+                            <td style={{ padding: '20px 30px' }}>{s.district}, {s.state}</td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -333,14 +354,13 @@ const AdminDashboard = () => {
               )}
 
               {/* EVENTS TAB */}
-              {activeTab === 'events' && (
+              {activeTab === 'events' && !scoringEvent && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
                   
                   {/* Create Event Banner */}
                   {!showEventForm && (
                     <motion.div 
-                      whileHover={{ scale: 1.01 }}
-                      onClick={() => setShowEventForm(true)}
+                      whileHover={{ scale: 1.01 }} onClick={() => setShowEventForm(true)}
                       style={{ background: 'linear-gradient(135deg, var(--primary-dark) 0%, #1e3a8a 100%)', borderRadius: '20px', padding: '30px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 10px 30px rgba(30, 58, 138, 0.2)' }}
                     >
                       <div>
@@ -356,27 +376,19 @@ const AdminDashboard = () => {
                   {/* Event Creation Form */}
                   <AnimatePresence>
                     {showEventForm && (
-                      <motion.div 
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        style={{ backgroundColor: 'white', borderRadius: '20px', boxShadow: '0 10px 40px rgba(0,0,0,0.03)', overflow: 'hidden', border: '1px solid #f1f5f9' }}
-                      >
-                        <div style={{ padding: '25px 30px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fafafa' }}>
-                          <h3 style={{ margin: 0, color: 'var(--text-dark)', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <Calendar style={{ color: 'var(--primary-blue)' }} /> Event Configuration
-                          </h3>
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ backgroundColor: 'white', borderRadius: '20px', overflow: 'hidden', border: '1px solid #f1f5f9' }}>
+                        <div style={{ padding: '25px 30px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', backgroundColor: '#fafafa' }}>
+                          <h3 style={{ margin: 0 }}>Event Configuration</h3>
                           <button onClick={() => setShowEventForm(false)} style={{ background: 'transparent', border: 'none', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer' }}>Cancel</button>
                         </div>
-                        
                         <form onSubmit={handleCreateEvent} style={{ padding: '30px' }}>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px', marginBottom: '30px' }}>
                             <div>
-                              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Event Name</label>
-                              <input type="text" required value={eventData.name} onChange={e => setEventData({...eventData, name: e.target.value})} style={inputStyle} placeholder="e.g. National 100m Sprint" />
+                              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Event Name</label>
+                              <input type="text" required value={eventData.name} onChange={e => setEventData({...eventData, name: e.target.value})} style={inputStyle} />
                             </div>
                             <div>
-                              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sport / Program</label>
+                              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Sport / Program</label>
                               <select required value={eventData.sport_category} onChange={e => setEventData({...eventData, sport_category: e.target.value})} style={inputStyle}>
                                 <option value="">Select Sport...</option>
                                 <option value="athletic">Athletic</option>
@@ -388,15 +400,15 @@ const AdminDashboard = () => {
                               </select>
                             </div>
                             <div>
-                              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Venue Location</label>
-                              <input type="text" required value={eventData.venue} onChange={e => setEventData({...eventData, venue: e.target.value})} style={inputStyle} placeholder="Stadium Name, City" />
+                              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Venue Location</label>
+                              <input type="text" required value={eventData.venue} onChange={e => setEventData({...eventData, venue: e.target.value})} style={inputStyle} />
                             </div>
                             <div>
-                              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Competition Date</label>
+                              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Competition Date</label>
                               <input type="date" required value={eventData.date} onChange={e => setEventData({...eventData, date: e.target.value})} style={inputStyle} />
                             </div>
                             <div>
-                              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Age Category</label>
+                              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Age Category</label>
                               <select required value={eventData.age_category} onChange={e => setEventData({...eventData, age_category: e.target.value})} style={inputStyle}>
                                 <option value="">Select Category</option>
                                 <option value="U-10">Under 10</option>
@@ -406,31 +418,29 @@ const AdminDashboard = () => {
                               </select>
                             </div>
                             <div>
-                              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Ranking Metric</label>
+                              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Ranking Metric</label>
                               <select required value={eventData.type} onChange={e => setEventData({...eventData, type: e.target.value})} style={inputStyle}>
-                                <option value="TIME">Time (Lower is better - Athletics/Swimming)</option>
-                                <option value="SCORE">Score (Higher is better - Archery/Shooting)</option>
-                                <option value="DISTANCE">Distance (Higher is better - Jumps/Throws)</option>
-                                <option value="POINTS">Points (Higher is better - General)</option>
+                                <option value="TIME">Time (Lower is better)</option>
+                                <option value="SCORE">Score (Higher is better)</option>
+                                <option value="DISTANCE">Distance (Higher is better)</option>
+                                <option value="POINTS">Points (Higher is better)</option>
                               </select>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                               <div>
-                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Reg. Start</label>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Reg. Start</label>
                                 <input type="date" required value={eventData.reg_start} onChange={e => setEventData({...eventData, reg_start: e.target.value})} style={inputStyle} />
                               </div>
                               <div>
-                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Reg. End</label>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Reg. End</label>
                                 <input type="date" required value={eventData.reg_end} onChange={e => setEventData({...eventData, reg_end: e.target.value})} style={inputStyle} />
                               </div>
                             </div>
                           </div>
                           
-                          <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #f1f5f9', paddingTop: '20px' }}>
-                            <button type="submit" disabled={isCreatingEvent} style={{ padding: '14px 30px', backgroundColor: 'var(--primary-blue)', color: 'white', border: 'none', borderRadius: '10px', cursor: isCreatingEvent ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 20px rgba(59, 130, 246, 0.3)' }}>
-                              {isCreatingEvent ? 'Broadcasting...' : 'Publish Competition'}
-                            </button>
-                          </div>
+                          <button type="submit" disabled={isCreatingEvent} style={{ padding: '14px 30px', backgroundColor: 'var(--primary-blue)', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold' }}>
+                            {isCreatingEvent ? 'Broadcasting...' : 'Publish Competition'}
+                          </button>
                         </form>
                       </motion.div>
                     )}
@@ -444,54 +454,121 @@ const AdminDashboard = () => {
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
-                          <tr style={{ backgroundColor: 'white', color: '#94a3b8', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                          <tr style={{ backgroundColor: 'white', color: '#94a3b8', fontSize: '12px', textTransform: 'uppercase' }}>
                             <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Competition Name</th>
-                            <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Details</th>
                             <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Schedule & Venue</th>
-                            <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Status</th>
+                            <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>Scoring</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {events.length === 0 ? (
-                            <tr><td colSpan="4" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No active events found in the system.</td></tr>
-                          ) : (
-                            events.map(ev => (
-                              <tr key={ev.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.2s' }} onMouseOver={e => e.currentTarget.style.backgroundColor='#f8fafc'} onMouseOut={e => e.currentTarget.style.backgroundColor='white'}>
-                                <td style={{ padding: '20px 30px' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#dcfce7', color: '#16a34a', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                      <Trophy size={20} />
-                                    </div>
-                                    <div>
-                                      <div style={{ fontWeight: 'bold', color: 'var(--text-dark)', fontSize: '15px' }}>{ev.name}</div>
-                                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px', textTransform: 'capitalize' }}>Program: {ev.sport_category || 'General'}</div>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td style={{ padding: '20px 30px' }}>
-                                  <div style={{ display: 'flex', gap: '8px', marginBottom: '5px' }}>
-                                    <span style={{ display: 'inline-block', backgroundColor: '#e0e7ff', color: '#4338ca', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold' }}>{ev.age_category}</span>
-                                    <span style={{ display: 'inline-block', backgroundColor: '#f1f5f9', color: '#475569', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold' }}>{ev.event_type}</span>
-                                  </div>
-                                </td>
-                                <td style={{ padding: '20px 30px' }}>
-                                  <div style={{ fontWeight: '500', color: 'var(--text-dark)', fontSize: '14px' }}>{new Date(ev.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>{ev.venue}</div>
-                                </td>
-                                <td style={{ padding: '20px 30px' }}>
-                                  <span style={{ display: 'inline-block', backgroundColor: '#dcfce7', color: '#16a34a', padding: '5px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', border: '1px solid #bbf7d0' }}>
-                                    PUBLISHED
-                                  </span>
-                                </td>
-                              </tr>
-                            ))
-                          )}
+                          {events.map(ev => (
+                            <tr key={ev.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '20px 30px' }}>
+                                <div style={{ fontWeight: 'bold', color: 'var(--text-dark)', fontSize: '15px' }}>{ev.name}</div>
+                                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px', textTransform: 'capitalize' }}>Program: {ev.sport_category || 'General'} • {ev.age_category}</div>
+                              </td>
+                              <td style={{ padding: '20px 30px' }}>
+                                <div style={{ fontWeight: '500', color: 'var(--text-dark)', fontSize: '14px' }}>{new Date(ev.event_date).toLocaleDateString()}</div>
+                                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>{ev.venue}</div>
+                              </td>
+                              <td style={{ padding: '20px 30px', textAlign: 'right' }}>
+                                <button 
+                                  onClick={() => handleOpenScoring(ev)}
+                                  style={{ backgroundColor: 'var(--accent-orange)', color: 'white', padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 10px rgba(249, 115, 22, 0.3)' }}
+                                >
+                                  Manage Scores <ChevronRight size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
                   </div>
                 </div>
               )}
+
+              {/* EVENT SCORING VIEW */}
+              {activeTab === 'events' && scoringEvent && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ backgroundColor: 'white', borderRadius: '20px', boxShadow: '0 10px 40px rgba(0,0,0,0.03)', overflow: 'hidden', border: '1px solid #f1f5f9' }}>
+                  
+                  {/* Header */}
+                  <div style={{ padding: '30px', backgroundColor: 'var(--primary-dark)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <button onClick={() => setScoringEvent(null)} style={{ background: 'transparent', border: 'none', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', marginBottom: '10px', fontSize: '13px', fontWeight: 'bold' }}>
+                        <ArrowLeft size={16} /> Back to Events
+                      </button>
+                      <h2 style={{ margin: 0, fontFamily: 'var(--font-heading)', fontSize: '24px' }}>{scoringEvent.name}</h2>
+                      <div style={{ marginTop: '5px', opacity: 0.8, fontSize: '14px' }}>{scoringEvent.venue} • {scoringEvent.age_category} • {scoringEvent.event_type} Metric</div>
+                    </div>
+                    <div style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '15px 25px', borderRadius: '12px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '24px', fontWeight: 'bold', fontFamily: 'var(--font-heading)' }}>{participants.length}</div>
+                      <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>Participants</div>
+                    </div>
+                  </div>
+
+                  {/* Scoring Table */}
+                  <div style={{ padding: '30px' }}>
+                    <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '15px', color: '#1e40af', fontSize: '14px', marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <CheckCircle size={18} /> Enter scores and click Save. The database will automatically generate National, State, and District ranks live!
+                    </div>
+
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#f8fafc', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' }}>
+                          <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>Student ID & Name</th>
+                          <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>School</th>
+                          <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0', width: '200px' }}>Score / Time ({scoringEvent.event_type})</th>
+                          <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0', width: '120px', textAlign: 'right' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {participants.length === 0 ? (
+                          <tr><td colSpan="4" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No students have registered for this event yet.</td></tr>
+                        ) : (
+                          participants.map(p => (
+                            <tr key={p.student_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '20px', fontWeight: 'bold', color: 'var(--text-dark)' }}>
+                                {p.students?.full_name} <br/>
+                                <span style={{ fontWeight: 'normal', fontSize: '12px', color: '#94a3b8' }}>{p.students?.custom_student_id}</span>
+                              </td>
+                              <td style={{ padding: '20px', color: '#64748b', fontSize: '14px' }}>
+                                {p.students?.schools?.school_name || 'Independent'}
+                              </td>
+                              <td style={{ padding: '20px' }}>
+                                <input 
+                                  type="number" 
+                                  step="0.01"
+                                  value={scores[p.student_id] || ''}
+                                  onChange={(e) => setScores({...scores, [p.student_id]: e.target.value})}
+                                  placeholder={scoringEvent.event_type === 'TIME' ? 'e.g. 12.5' : 'e.g. 100'}
+                                  style={{ width: '100%', padding: '12px 15px', borderRadius: '8px', border: '2px solid #e2e8f0', outline: 'none', fontSize: '15px', fontWeight: 'bold', color: 'var(--primary-blue)' }}
+                                />
+                              </td>
+                              <td style={{ padding: '20px', textAlign: 'right' }}>
+                                <button 
+                                  onClick={() => handleSaveScore(p.student_id)}
+                                  disabled={savingScore === p.student_id}
+                                  style={{ 
+                                    padding: '10px 15px', 
+                                    backgroundColor: savedStatus[p.student_id] ? '#10b981' : 'var(--primary-blue)', 
+                                    color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto',
+                                    transition: 'background-color 0.3s'
+                                  }}
+                                >
+                                  {savingScore === p.student_id ? 'Saving...' : savedStatus[p.student_id] ? <CheckCircle size={16} /> : <Save size={16} />}
+                                  {savedStatus[p.student_id] ? 'Saved!' : 'Save'}
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </motion.div>
+              )}
+
             </motion.div>
           </AnimatePresence>
         )}
@@ -500,6 +577,7 @@ const AdminDashboard = () => {
   );
 };
 
+// ... AdminLogin component remains identical to previous 
 const AdminLogin = ({ forceAdminLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -524,8 +602,7 @@ const AdminLogin = ({ forceAdminLogin }) => {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f1f5f9', backgroundImage: 'radial-gradient(#e2e8f0 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
         style={{ backgroundColor: 'white', padding: '50px', borderRadius: '24px', boxShadow: '0 20px 60px rgba(0,0,0,0.05)', width: '100%', maxWidth: '420px', border: '1px solid rgba(255,255,255,0.8)' }}
       >
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
@@ -538,12 +615,7 @@ const AdminLogin = ({ forceAdminLogin }) => {
         
         <AnimatePresence>
           {error && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              style={{ backgroundColor: '#fef2f2', color: '#ef4444', padding: '15px', borderRadius: '12px', marginBottom: '25px', fontSize: '14px', textAlign: 'center', border: '1px solid #fecaca', fontWeight: '500' }}
-            >
+            <motion.div style={{ backgroundColor: '#fef2f2', color: '#ef4444', padding: '15px', borderRadius: '12px', marginBottom: '25px', fontSize: '14px', textAlign: 'center', border: '1px solid #fecaca', fontWeight: '500' }}>
               {error}
             </motion.div>
           )}
@@ -554,39 +626,17 @@ const AdminLogin = ({ forceAdminLogin }) => {
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', color: '#475569', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Username</label>
             <div style={{ position: 'relative' }}>
               <Users size={18} style={{ position: 'absolute', left: '15px', top: '15px', color: '#94a3b8' }} />
-              <input 
-                type="text" 
-                required 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={{ width: '100%', padding: '14px 15px 14px 45px', borderRadius: '12px', border: '2px solid #f1f5f9', outline: 'none', fontSize: '15px', transition: 'all 0.2s', backgroundColor: '#f8fafc' }}
-                onFocus={(e) => e.target.style.borderColor = 'var(--primary-blue)'}
-                onBlur={(e) => e.target.style.borderColor = '#f1f5f9'}
-              />
+              <input type="text" required value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: '100%', padding: '14px 15px 14px 45px', borderRadius: '12px', border: '2px solid #f1f5f9', outline: 'none', fontSize: '15px', transition: 'all 0.2s', backgroundColor: '#f8fafc' }} />
             </div>
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', color: '#475569', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Password</label>
             <div style={{ position: 'relative' }}>
               <Lock size={18} style={{ position: 'absolute', left: '15px', top: '15px', color: '#94a3b8' }} />
-              <input 
-                type="password" 
-                required 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={{ width: '100%', padding: '14px 15px 14px 45px', borderRadius: '12px', border: '2px solid #f1f5f9', outline: 'none', fontSize: '15px', transition: 'all 0.2s', backgroundColor: '#f8fafc' }}
-                onFocus={(e) => e.target.style.borderColor = 'var(--primary-blue)'}
-                onBlur={(e) => e.target.style.borderColor = '#f1f5f9'}
-              />
+              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: '100%', padding: '14px 15px 14px 45px', borderRadius: '12px', border: '2px solid #f1f5f9', outline: 'none', fontSize: '15px', transition: 'all 0.2s', backgroundColor: '#f8fafc' }} />
             </div>
           </div>
-          <button 
-            type="submit" 
-            disabled={isLoggingIn}
-            style={{ padding: '16px', backgroundColor: 'var(--primary-blue)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: isLoggingIn ? 'not-allowed' : 'pointer', marginTop: '15px', fontSize: '16px', boxShadow: '0 10px 25px rgba(59, 130, 246, 0.4)', transition: 'all 0.2s', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}
-            onMouseOver={(e) => !isLoggingIn && (e.currentTarget.style.transform = 'translateY(-2px)')}
-            onMouseOut={(e) => !isLoggingIn && (e.currentTarget.style.transform = 'translateY(0)')}
-          >
+          <button type="submit" disabled={isLoggingIn} style={{ padding: '16px', backgroundColor: 'var(--primary-blue)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: isLoggingIn ? 'not-allowed' : 'pointer', marginTop: '15px', fontSize: '16px', boxShadow: '0 10px 25px rgba(59, 130, 246, 0.4)' }}>
             {isLoggingIn ? 'Authenticating...' : 'Secure Login'}
           </button>
         </form>
