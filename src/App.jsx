@@ -11,6 +11,7 @@ import RegisterSchool from './pages/RegisterSchool';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
 import SchoolDashboard from './pages/dashboards/SchoolDashboard';
 import StudentDashboard from './pages/dashboards/StudentDashboard';
+import Events from './pages/Events';
 import './App.css';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/program/:category" element={<Program />} />
+          <Route path="/events" element={<Events />} />
           <Route path="/login" element={<Auth />} />
           <Route path="/register/student" element={<RegisterStudent />} />
           <Route path="/register/school" element={<RegisterSchool />} />

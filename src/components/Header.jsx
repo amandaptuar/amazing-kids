@@ -44,7 +44,7 @@ const Header = () => {
         { name: 'Musician', path: '/program/musician' }
       ]
     },
-    { name: 'Event', href: '#' },
+    { name: 'Event', href: '/events' },
     { name: 'Associate Member', href: '#' },
     { name: 'Contact Us', href: '/contact' }
   ];
