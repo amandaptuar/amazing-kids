@@ -105,7 +105,8 @@ const Header = () => {
                       borderRadius: '8px',
                       padding: '10px 0',
                       minWidth: '200px',
-                      marginTop: '10px',
+                      borderTop: '10px solid transparent', // Invisible bridge to prevent hover loss
+                      backgroundClip: 'padding-box', // Keeps the border transparent while the background is white
                       display: 'flex',
                       flexDirection: 'column'
                     }}
