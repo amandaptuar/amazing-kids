@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerSchool } from '../services/authAPI';
-import { Building, MapPin, Phone, Mail, Lock, ArrowRight, User } from 'lucide-react';
+import { Building, MapPin, Phone, Mail, Lock, ArrowRight, User, ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
+import * as india from '../lib/indiaData';
 
 const RegisterSchool = () => {
   const [formData, setFormData] = useState({
@@ -11,6 +12,9 @@ const RegisterSchool = () => {
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const allStates = india.getAllStates();
+  const availableDistricts = formData.state ? india.getDistrictsByState(formData.state) || [] : [];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -84,7 +88,17 @@ const RegisterSchool = () => {
               <label style={labelStyle}>State</label>
               <div style={inputContainerStyle}>
                 <MapPin size={18} style={iconStyle} />
-                <input type="text" placeholder="State" required value={formData.state} onChange={e => setFormData({...formData, state: e.target.value})} style={inputStyle} />
+                <select 
+                  required 
+                  value={formData.state} 
+                  onChange={e => setFormData({...formData, state: e.target.value, district: ''})} 
+                  style={{...inputStyle, paddingLeft: '45px', appearance: 'auto'}}
+                >
+                  <option value="" disabled>-- Select State --</option>
+                  {allStates.map(state => (
+                    <option key={state} value={state}>{state}</option>
+                  ))}
+                </select>
               </div>
             </div>
             
@@ -92,7 +106,18 @@ const RegisterSchool = () => {
               <label style={labelStyle}>District</label>
               <div style={inputContainerStyle}>
                 <MapPin size={18} style={iconStyle} />
-                <input type="text" placeholder="District" required value={formData.district} onChange={e => setFormData({...formData, district: e.target.value})} style={inputStyle} />
+                <select 
+                  required 
+                  value={formData.district} 
+                  onChange={e => setFormData({...formData, district: e.target.value})} 
+                  style={{...inputStyle, paddingLeft: '45px', appearance: 'auto'}}
+                  disabled={!formData.state}
+                >
+                  <option value="" disabled>-- Select District --</option>
+                  {availableDistricts.map(dist => (
+                    <option key={dist} value={dist}>{dist}</option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>

@@ -43,6 +43,10 @@ const AdminDashboard = () => {
   const [schoolStudents, setSchoolStudents] = useState([]);
   const [loadingSchool, setLoadingSchool] = useState(false);
 
+  // Search State
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  const [schoolSearchQuery, setSchoolSearchQuery] = useState('');
+
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
@@ -274,6 +278,22 @@ const AdminDashboard = () => {
 
   const inputStyle = { width: '100%', padding: '12px 15px', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none', backgroundColor: '#ffffff', color: '#0f172a', fontSize: '14px', transition: 'all 0.2s', marginTop: '5px' };
 
+  const filteredStudents = students.filter(s => {
+    const query = (studentSearchQuery || '').toLowerCase();
+    if (!query) return true;
+    return (s.full_name && s.full_name.toLowerCase().includes(query)) || 
+           (s.custom_student_id && s.custom_student_id.toLowerCase().includes(query)) ||
+           (s.schools && s.schools.school_name && s.schools.school_name.toLowerCase().includes(query));
+  });
+
+  const filteredSchools = schools.filter(s => {
+    const query = (schoolSearchQuery || '').toLowerCase();
+    if (!query) return true;
+    return (s.school_name && s.school_name.toLowerCase().includes(query)) || 
+           (s.custom_school_id && s.custom_school_id.toLowerCase().includes(query)) ||
+           (s.principal_name && s.principal_name.toLowerCase().includes(query));
+  });
+
   return (
     <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', display: 'flex', fontFamily: 'var(--font-body)', paddingTop: '80px', color: '#0f172a' }}>
       
@@ -375,8 +395,18 @@ const AdminDashboard = () => {
               {/* STUDENTS TAB */}
               {activeTab === 'students' && !selectedStudent && (
                 <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-                  <div style={{ padding: '25px 30px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc' }}>
+                  <div style={{ padding: '25px 30px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', flexWrap: 'wrap', gap: '15px' }}>
                     <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px' }}>Registered Students</h3>
+                    <div style={{ position: 'relative', width: '300px' }}>
+                      <input 
+                        type="text" 
+                        placeholder="Search by name, ID, or school..." 
+                        value={studentSearchQuery}
+                        onChange={(e) => setStudentSearchQuery(e.target.value)}
+                        style={{ width: '100%', padding: '10px 15px 10px 40px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px', backgroundColor: 'white' }}
+                      />
+                      <Search size={18} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '10px' }} />
+                    </div>
                   </div>
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -390,10 +420,10 @@ const AdminDashboard = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {students.length === 0 ? (
-                          <tr><td colSpan="4" style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>No students found in the database.</td></tr>
+                        {filteredStudents.length === 0 ? (
+                          <tr><td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>No students found matching your search.</td></tr>
                         ) : (
-                          students.map(s => (
+                          filteredStudents.map(s => (
                             <tr key={s.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
                               <td style={{ padding: '20px 30px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -575,8 +605,18 @@ const AdminDashboard = () => {
               {/* SCHOOLS TAB */}
               {activeTab === 'schools' && (
                 <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-                  <div style={{ padding: '25px 30px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc' }}>
+                  <div style={{ padding: '25px 30px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', flexWrap: 'wrap', gap: '15px' }}>
                     <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px' }}>Registered Institutions</h3>
+                    <div style={{ position: 'relative', width: '300px' }}>
+                      <input 
+                        type="text" 
+                        placeholder="Search by name, ID, or principal..." 
+                        value={schoolSearchQuery}
+                        onChange={(e) => setSchoolSearchQuery(e.target.value)}
+                        style={{ width: '100%', padding: '10px 15px 10px 40px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px', backgroundColor: 'white' }}
+                      />
+                      <Search size={18} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '10px' }} />
+                    </div>
                   </div>
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -588,8 +628,11 @@ const AdminDashboard = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {schools.map(s => (
-                          <tr key={s.id} onClick={() => handleViewSchool(s)} style={{ borderBottom: '1px solid #e2e8f0', cursor: 'pointer', transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                        {filteredSchools.length === 0 ? (
+                          <tr><td colSpan="3" style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>No schools found matching your search.</td></tr>
+                        ) : (
+                          filteredSchools.map(s => (
+                            <tr key={s.id} onClick={() => handleViewSchool(s)} style={{ borderBottom: '1px solid #e2e8f0', cursor: 'pointer', transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                             <td style={{ padding: '20px 30px', fontWeight: 'bold' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#eff6ff', color: '#3b82f6', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold' }}>
@@ -609,7 +652,8 @@ const AdminDashboard = () => {
                               </div>
                             </td>
                           </tr>
-                        ))}
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
