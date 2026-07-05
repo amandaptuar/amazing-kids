@@ -14,6 +14,38 @@ const StudentDashboard = () => {
   const [isBirthday, setIsBirthday] = useState(false);
   const [showBirthdayModal, setShowBirthdayModal] = useState(false);
   const [points, setPoints] = useState(0);
+  const [redeemingId, setRedeemingId] = useState(null);
+
+  const goodies = [
+    { id: 1, name: 'Amazing Kids Cap', cost: 1000, icon: '🧢', color: '#f59e0b', desc: 'Premium cotton cap' },
+    { id: 2, name: 'Sports Sipper', cost: 1500, icon: '🥤', color: '#3b82f6', desc: '750ml leak-proof bottle' },
+    { id: 3, name: 'Champion T-Shirt', cost: 3000, icon: '👕', color: '#10b981', desc: 'Breathable dry-fit tee' },
+    { id: 4, name: 'Smart Fitness Band', cost: 8000, icon: '⌚', color: '#8b5cf6', desc: 'Track your activity' }
+  ];
+
+  const handleRedeem = async (goodie) => {
+    if (points < goodie.cost) {
+      alert(`Insufficient points! You need ${goodie.cost - points} more points to redeem the ${goodie.name}. Play arcade games or win tournaments to earn more!`);
+      return;
+    }
+    
+    if (window.confirm(`Are you sure you want to spend ${goodie.cost} points on ${goodie.name}?`)) {
+      setRedeemingId(goodie.id);
+      try {
+        const newPoints = points - goodie.cost;
+        const { error } = await supabase.from('students').update({ points: newPoints }).eq('id', profile.id);
+        
+        if (error) throw error;
+        
+        setPoints(newPoints);
+        alert(`🎉 Success! You have successfully redeemed the ${goodie.name}. It will be shipped to your registered address or school.`);
+      } catch (error) {
+        alert("An error occurred while redeeming. Please try again later.");
+      } finally {
+        setRedeemingId(null);
+      }
+    }
+  };
 
   useEffect(() => {
     if (role === 'student' && profile) {
@@ -144,7 +176,7 @@ const StudentDashboard = () => {
           <div style={{ textAlign: 'center', backgroundColor: '#fffbeb', padding: '15px 25px', borderRadius: '16px', border: '1px solid #fde68a', boxShadow: '0 10px 20px rgba(251,191,36,0.1)' }}>
             <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#b45309', fontWeight: 'bold', letterSpacing: '1px' }}>Global Points</div>
             <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#fbbf24', fontFamily: 'monospace' }}>{points.toLocaleString()}</div>
-            <Link to="/games" style={{ display: 'inline-block', marginTop: '5px', fontSize: '12px', color: 'var(--primary-blue)', textDecoration: 'none', fontWeight: 'bold' }}>Play & Earn +</Link>
+            <Link to="/store" style={{ display: 'inline-block', marginTop: '5px', fontSize: '12px', color: 'var(--primary-blue)', textDecoration: 'none', fontWeight: 'bold' }}>Shop Goodies &rarr;</Link>
           </div>
         </div>
       </div>
@@ -269,7 +301,6 @@ const StudentDashboard = () => {
         </div>
 
       </div>
-      
       {/* Birthday Modal */}
       <AnimatePresence>
         {showBirthdayModal && (

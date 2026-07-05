@@ -45,15 +45,7 @@ const Header = () => {
       ]
     },
     { name: 'Events', href: '/events' },
-    { 
-      name: 'Play & Rank', 
-      href: '#', 
-      hasDropdown: true,
-      dropdownItems: [
-        { name: 'Arcade Games', path: '/games' },
-        { name: 'Leaderboard', path: '/leaderboard' }
-      ]
-    },
+    { name: 'Goodies Store', href: '/store' },
     { name: 'Contact', href: '/contact' }
   ];
 

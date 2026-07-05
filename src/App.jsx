@@ -15,6 +15,7 @@ import Events from './pages/Events';
 import Games from './pages/Games';
 import Leaderboard from './pages/Leaderboard';
 import Certificate from './pages/Certificate';
+import Store from './pages/Store';
 import './App.css';
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
           <Route path="/games" element={<Games />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/certificate/:eventId/:studentId" element={<Certificate />} />
+          <Route path="/store" element={<Store />} />
         </Routes>
         <Footer />
       </div>

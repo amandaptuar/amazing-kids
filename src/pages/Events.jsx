@@ -14,6 +14,12 @@ const Events = () => {
   const [myRegistrations, setMyRegistrations] = useState([]);
   const [registeringId, setRegisteringId] = useState(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
+  
+  // Winners Modal State
+  const [showWinnersModal, setShowWinnersModal] = useState(false);
+  const [winnersList, setWinnersList] = useState([]);
+  const [loadingWinners, setLoadingWinners] = useState(false);
+  const [selectedEventName, setSelectedEventName] = useState('');
 
   useEffect(() => {
     fetchEvents();
@@ -57,7 +63,52 @@ const Events = () => {
     return now >= startDate && now < endDate;
   };
 
-  const handleRegisterClick = async (eventId) => {
+  const isEventFinished = (eventDateStr) => {
+    const eventDate = new Date(eventDateStr);
+    eventDate.setHours(23, 59, 59, 999);
+    const now = new Date();
+    return now > eventDate;
+  };
+
+  const handleCheckWinners = async (ev) => {
+    setSelectedEventName(ev.name);
+    setShowWinnersModal(true);
+    setLoadingWinners(true);
+
+    const { data, error } = await supabase
+      .from('rankings')
+      .select(`
+        air_rank,
+        state_rank,
+        district_rank,
+        metric_value,
+        students (
+          full_name,
+          custom_student_id,
+          schools (school_name)
+        )
+      `)
+      .eq('event_id', ev.id)
+      .order('air_rank', { ascending: true });
+      
+    if (data) {
+      setWinnersList(data);
+    }
+    setLoadingWinners(false);
+  };
+
+  const calculateAge = (dobString) => {
+    const today = new Date();
+    const birthDate = new Date(dobString);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
+  };
+
+  const handleRegisterClick = async (ev) => {
     if (!user) {
       setShowLoginPopup(true);
       return;
@@ -68,10 +119,34 @@ const Events = () => {
       return;
     }
 
-    setRegisteringId(eventId);
+    // --- RESTRICTION 1: Profile Completion ---
+    if (!profile.address) {
+       alert("Registration Blocked: Please complete your profile (add your Address) by contacting your school or admin before registering for official events.");
+       return;
+    }
+
+    // --- RESTRICTION 2: Age Category Verification ---
+    if (profile.dob) {
+      const age = calculateAge(profile.dob);
+      let maxAge = 99;
+
+      if (ev.age_category === 'U-10') maxAge = 10;
+      else if (ev.age_category === 'U-14') maxAge = 14;
+      else if (ev.age_category === 'U-18') maxAge = 18;
+
+      if (age > maxAge && ev.age_category !== 'Open') {
+        alert(`Age Restriction: You are ${age} years old. This event is strictly for the ${ev.age_category} category. You are not eligible to participate.`);
+        return;
+      }
+    } else {
+      alert("Registration Blocked: Your Date of Birth is missing from your profile. Please ask your school or admin to update your DOB to verify eligibility.");
+      return;
+    }
+
+    setRegisteringId(ev.id);
     try {
       const { error } = await supabase.from('event_participants').insert({
-        event_id: eventId,
+        event_id: ev.id,
         student_id: profile.id
       });
       
@@ -86,7 +161,7 @@ const Events = () => {
       await supabase.from('students').update({ points: currentPoints + 500 }).eq('id', profile.id);
       
       alert("Successfully Registered for the Event! 🎉 You earned 500 Global Points!");
-      setMyRegistrations([...myRegistrations, eventId]);
+      setMyRegistrations([...myRegistrations, ev.id]);
     } catch (err) {
       alert(err.message || "An error occurred while registering.");
     } finally {
@@ -198,6 +273,7 @@ const Events = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '30px' }}>
               {events.map((ev, index) => {
                 const regOpen = isRegistrationOpen(ev.reg_start_date, ev.reg_end_date);
+                const isFinished = isEventFinished(ev.event_date);
                 const eventDate = new Date(ev.event_date);
                 
                 return (
@@ -256,16 +332,23 @@ const Events = () => {
 
                       <div style={{ marginTop: 'auto' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px' }}>
-                          <Clock size={16} style={{ color: regOpen ? '#10b981' : '#ef4444' }} />
-                          <span style={{ fontSize: '13px', fontWeight: '600', color: regOpen ? '#10b981' : '#ef4444' }}>
-                            {regOpen ? 'Registration is Open' : 'Registration Closed'}
+                          <Clock size={16} style={{ color: isFinished ? '#64748b' : (regOpen ? '#10b981' : '#ef4444') }} />
+                          <span style={{ fontSize: '13px', fontWeight: '600', color: isFinished ? '#64748b' : (regOpen ? '#10b981' : '#ef4444') }}>
+                            {isFinished ? 'Event Concluded' : (regOpen ? 'Registration is Open' : 'Registration Closed')}
                           </span>
                         </div>
                         <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '25px', padding: '12px', backgroundColor: '#f1f5f9', borderRadius: '8px' }}>
                           <strong>Window:</strong> {new Date(ev.reg_start_date).toLocaleDateString()} - {new Date(ev.reg_end_date).toLocaleDateString()}
                         </div>
 
-                        {myRegistrations.includes(ev.id) ? (
+                        {isFinished ? (
+                          <button 
+                            onClick={() => handleCheckWinners(ev)}
+                            style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', width: '100%', padding: '14px', backgroundColor: 'var(--primary-dark)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(15, 23, 42, 0.3)' }}
+                          >
+                            <Trophy size={18} color="#fbbf24" /> Check Winner List
+                          </button>
+                        ) : myRegistrations.includes(ev.id) ? (
                           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', width: '100%', padding: '14px', backgroundColor: '#dcfce7', color: '#16a34a', borderRadius: '12px', fontWeight: 'bold', fontSize: '15px', border: '1px solid #bbf7d0' }}>
                             <CheckCircle size={18} /> Registered Successfully
                           </div>
@@ -278,7 +361,7 @@ const Events = () => {
                           </button>
                         ) : (
                           <button 
-                            onClick={() => handleRegisterClick(ev.id)}
+                            onClick={() => handleRegisterClick(ev)}
                             disabled={registeringId === ev.id}
                             style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', width: '100%', padding: '14px', backgroundColor: 'var(--accent-orange)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '15px', cursor: registeringId === ev.id ? 'wait' : 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 15px rgba(249, 115, 22, 0.3)' }}
                             onMouseOver={(e) => { if(registeringId !== ev.id) e.currentTarget.style.backgroundColor = '#ea580c'; }}
@@ -297,6 +380,85 @@ const Events = () => {
           )}
         </div>
       </section>
+
+      {/* Winners Modal */}
+      <AnimatePresence>
+        {showWinnersModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 3000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', backdropFilter: 'blur(5px)' }}
+            onClick={() => setShowWinnersModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 30 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ backgroundColor: 'white', padding: '0', borderRadius: '24px', maxWidth: '800px', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}
+            >
+              <div style={{ backgroundColor: 'var(--primary-dark)', padding: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'white' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                  <Trophy size={28} color="#fbbf24" />
+                  <div>
+                    <h2 style={{ fontFamily: 'var(--font-heading)', margin: 0, fontSize: '24px' }}>Official Winner List</h2>
+                    <p style={{ margin: '5px 0 0 0', opacity: 0.8, fontSize: '14px' }}>{selectedEventName}</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowWinnersModal(false)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', color: 'white', padding: '8px', borderRadius: '50%', display: 'flex' }}>
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div style={{ padding: '30px', overflowY: 'auto', flex: 1, backgroundColor: '#f8fafc' }}>
+                {loadingWinners ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                    <div style={{ width: '40px', height: '40px', border: '4px solid #e2e8f0', borderTopColor: 'var(--primary-blue)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 15px auto' }}></div>
+                    Fetching live rankings...
+                  </div>
+                ) : winnersList.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                    <AlertCircle size={48} style={{ color: '#cbd5e1', margin: '0 auto 15px auto' }} />
+                    <h3 style={{ fontSize: '20px', color: 'var(--text-dark)', margin: '0 0 10px 0' }}>Results Not Published Yet</h3>
+                    <p style={{ color: '#64748b' }}>The event administrators have not uploaded the final scores for this competition.</p>
+                  </div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f1f5f9', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' }}>
+                        <th style={{ padding: '15px 20px', borderBottom: '1px solid #e2e8f0', width: '80px' }}>Rank</th>
+                        <th style={{ padding: '15px 20px', borderBottom: '1px solid #e2e8f0' }}>Student Profile</th>
+                        <th style={{ padding: '15px 20px', borderBottom: '1px solid #e2e8f0' }}>Institution</th>
+                        <th style={{ padding: '15px 20px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>Score / Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {winnersList.map((winner, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: winner.air_rank <= 3 ? 'rgba(251, 191, 36, 0.05)' : 'white' }}>
+                          <td style={{ padding: '20px', fontWeight: 'bold', fontSize: '18px', color: winner.air_rank === 1 ? '#fbbf24' : winner.air_rank === 2 ? '#94a3b8' : winner.air_rank === 3 ? '#b45309' : '#64748b' }}>
+                            #{winner.air_rank}
+                          </td>
+                          <td style={{ padding: '20px' }}>
+                            <div style={{ fontWeight: 'bold', color: 'var(--text-dark)', fontSize: '15px' }}>{winner.students?.full_name}</div>
+                            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>ID: {winner.students?.custom_student_id}</div>
+                          </td>
+                          <td style={{ padding: '20px', color: '#64748b', fontSize: '14px' }}>
+                            {winner.students?.schools?.school_name || 'Independent'}
+                          </td>
+                          <td style={{ padding: '20px', textAlign: 'right', fontWeight: 'bold', color: 'var(--primary-blue)', fontSize: '16px' }}>
+                            {winner.metric_value}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       <style>{`
         @keyframes spin {
