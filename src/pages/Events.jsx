@@ -80,7 +80,12 @@ const Events = () => {
         throw error;
       }
       
-      alert("Successfully Registered for the Event! 🎉");
+      // Award 500 points for participating!
+      const { data: studentData } = await supabase.from('students').select('points').eq('id', profile.id).single();
+      const currentPoints = studentData?.points || 0;
+      await supabase.from('students').update({ points: currentPoints + 500 }).eq('id', profile.id);
+      
+      alert("Successfully Registered for the Event! 🎉 You earned 500 Global Points!");
       setMyRegistrations([...myRegistrations, eventId]);
     } catch (err) {
       alert(err.message || "An error occurred while registering.");

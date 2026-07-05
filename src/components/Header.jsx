@@ -30,9 +30,9 @@ const Header = () => {
 
   const navLinks = [
     { name: 'Home', href: '/' },
-    { name: 'About Us', href: '/about' },
+    { name: 'About', href: '/about' },
     { 
-      name: 'Program', 
+      name: 'Programs', 
       href: '#', 
       hasDropdown: true,
       dropdownItems: [
@@ -44,9 +44,17 @@ const Header = () => {
         { name: 'Musician', path: '/program/musician' }
       ]
     },
-    { name: 'Event', href: '/events' },
-    { name: 'Associate Member', href: '#' },
-    { name: 'Contact Us', href: '/contact' }
+    { name: 'Events', href: '/events' },
+    { 
+      name: 'Play & Rank', 
+      href: '#', 
+      hasDropdown: true,
+      dropdownItems: [
+        { name: 'Arcade Games', path: '/games' },
+        { name: 'Leaderboard', path: '/leaderboard' }
+      ]
+    },
+    { name: 'Contact', href: '/contact' }
   ];
 
   const [activeDropdown, setActiveDropdown] = useState(null);

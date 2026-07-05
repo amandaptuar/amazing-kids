@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Users, Building, Calendar, Trophy, Lock, Search, ChevronRight, PlusCircle, LayoutDashboard, Settings, ArrowLeft, Save, CheckCircle } from 'lucide-react';
+import { Users, Building, Calendar, Trophy, Lock, Search, ChevronRight, PlusCircle, LayoutDashboard, Settings, ArrowLeft, Save, CheckCircle, Crown } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -30,6 +30,13 @@ const AdminDashboard = () => {
   const [savingScore, setSavingScore] = useState(null); // studentId being saved
   const [savedStatus, setSavedStatus] = useState({}); // { studentId: true }
 
+  const [leaderboard, setLeaderboard] = useState([]);
+  
+  // Student Overview State
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [studentPerformances, setStudentPerformances] = useState([]);
+  const [loadingStudent, setLoadingStudent] = useState(false);
+
   useEffect(() => {
     if (role === 'admin') {
       fetchDashboardData();
@@ -55,9 +62,41 @@ const AdminDashboard = () => {
 
     // Fetch Students Data
     const { data: studentsData } = await supabase.from('students').select(`*, schools (school_name, custom_school_id)`).order('created_at', { ascending: false });
-    if (studentsData) setStudents(studentsData);
+    if (studentsData) {
+      setStudents(studentsData);
+      // Generate Leaderboard
+      const sortedStudents = [...studentsData].filter(s => s.points > 0).sort((a, b) => b.points - a.points);
+      setLeaderboard(sortedStudents);
+    }
     
     setDataLoading(false);
+  };
+
+  const handleViewStudent = async (student) => {
+    setSelectedStudent(student);
+    setLoadingStudent(true);
+    
+    const { data: perfData } = await supabase
+      .from('performances')
+      .select(`
+        metric_value,
+        national_rank,
+        state_rank,
+        district_rank,
+        events (
+          name,
+          sport_category,
+          event_type,
+          event_date
+        )
+      `)
+      .eq('student_id', student.id)
+      .order('created_at', { ascending: false });
+      
+    if (perfData) {
+      setStudentPerformances(perfData);
+    }
+    setLoadingStudent(false);
   };
 
   const handleCreateEvent = async (e) => {
@@ -167,48 +206,49 @@ const AdminDashboard = () => {
   if (role !== 'admin') return <AdminLogin forceAdminLogin={forceAdminLogin} />;
 
   const statCards = [
-    { title: 'Registered Students', value: stats.students, icon: <Users size={28} style={{ color: '#fff' }}/>, bg: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', shadow: 'rgba(59, 130, 246, 0.3)' },
-    { title: 'Registered Schools', value: stats.schools, icon: <Building size={28} style={{ color: '#fff' }}/>, bg: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', shadow: 'rgba(239, 68, 68, 0.3)' },
-    { title: 'Active Competitions', value: stats.events, icon: <Trophy size={28} style={{ color: '#fff' }}/>, bg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', shadow: 'rgba(16, 185, 129, 0.3)' }
+    { title: 'Registered Students', value: stats.students, icon: <Users size={28} style={{ color: '#fff' }}/>, bg: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)', shadow: 'rgba(37, 99, 235, 0.3)' },
+    { title: 'Registered Schools', value: stats.schools, icon: <Building size={28} style={{ color: '#fff' }}/>, bg: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', shadow: 'rgba(139, 92, 246, 0.3)' },
+    { title: 'Active Competitions', value: stats.events, icon: <Trophy size={28} style={{ color: '#fff' }}/>, bg: 'linear-gradient(135deg, #10b981 0%, #047857 100%)', shadow: 'rgba(16, 185, 129, 0.3)' }
   ];
 
-  const inputStyle = { width: '100%', padding: '12px 15px', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none', backgroundColor: '#f8fafc', fontSize: '14px', transition: 'all 0.2s', marginTop: '5px' };
+  const inputStyle = { width: '100%', padding: '12px 15px', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none', backgroundColor: '#ffffff', color: '#0f172a', fontSize: '14px', transition: 'all 0.2s', marginTop: '5px' };
 
   return (
-    <div style={{ backgroundColor: '#f1f5f9', minHeight: '100vh', display: 'flex', fontFamily: 'var(--font-body)', paddingTop: '80px' }}>
+    <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', display: 'flex', fontFamily: 'var(--font-body)', paddingTop: '80px', color: '#0f172a' }}>
       
       {/* Modern Sidebar */}
       <div style={{ width: '280px', backgroundColor: '#ffffff', minHeight: 'calc(100vh - 80px)', padding: '30px 20px', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', position: 'fixed', left: 0, top: '80px', zIndex: 10 }}>
         <div style={{ marginBottom: '40px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ backgroundColor: 'var(--primary-dark)', padding: '10px', borderRadius: '12px' }}>
-            <Lock size={24} style={{ color: 'var(--accent-orange)' }} />
+          <div style={{ backgroundColor: '#2dd4bf', padding: '10px', borderRadius: '12px', boxShadow: '0 0 15px rgba(45, 212, 191, 0.3)' }}>
+            <Lock size={24} style={{ color: '#0f172a' }} />
           </div>
           <div>
-            <h2 style={{ fontFamily: 'var(--font-heading)', margin: 0, fontSize: '18px', color: 'var(--text-dark)', letterSpacing: '-0.5px' }}>Admin Center</h2>
-            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-light)' }}>Super User Access</p>
+            <h2 style={{ fontFamily: 'var(--font-heading)', margin: 0, fontSize: '18px', color: '#0f172a', letterSpacing: '-0.5px' }}>Admin Center</h2>
+            <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Super User Access</p>
           </div>
         </div>
 
-        <p style={{ fontSize: '11px', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '15px', paddingLeft: '15px' }}>Main Menu</p>
+        <p style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '15px', paddingLeft: '15px' }}>Main Menu</p>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0, flex: 1 }}>
           {[
-            { id: 'overview', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+            { id: 'overview', icon: <LayoutDashboard size={20} />, label: 'Dashboard Overview' },
             { id: 'students', icon: <Users size={20} />, label: 'Students Directory' },
             { id: 'schools', icon: <Building size={20} />, label: 'Schools Directory' },
-            { id: 'events', icon: <Calendar size={20} />, label: 'Competitions' },
+            { id: 'events', icon: <Calendar size={20} />, label: 'Competitions & Scores' },
+            { id: 'leaderboard', icon: <Crown size={20} />, label: 'Points Leaderboard' },
           ].map(tab => (
             <li key={tab.id} style={{ marginBottom: '8px' }}>
               <button 
                 onClick={() => { setActiveTab(tab.id); setScoringEvent(null); }}
                 style={{ 
                   width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 15px', cursor: 'pointer', 
-                  backgroundColor: activeTab === tab.id ? 'var(--primary-blue)' : 'transparent',
-                  color: activeTab === tab.id ? 'white' : '#64748b',
+                  backgroundColor: activeTab === tab.id ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                  color: activeTab === tab.id ? '#60a5fa' : '#94a3b8',
                   border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: activeTab === tab.id ? '600' : '500',
-                  transition: 'all 0.2s ease', textAlign: 'left'
+                  transition: 'all 0.2s ease', textAlign: 'left', borderLeft: activeTab === tab.id ? '3px solid #3b82f6' : '3px solid transparent'
                 }}
-                onMouseOver={(e) => { if(activeTab !== tab.id) e.currentTarget.style.backgroundColor = '#f1f5f9'; }}
-                onMouseOut={(e) => { if(activeTab !== tab.id) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                onMouseOver={(e) => { if(activeTab !== tab.id) { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; } }}
+                onMouseOut={(e) => { if(activeTab !== tab.id) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#64748b'; } }}
               >
                 <div style={{ opacity: activeTab === tab.id ? 1 : 0.7 }}>{tab.icon}</div>
                 <span style={{ flex: 1 }}>{tab.label}</span>
@@ -225,17 +265,17 @@ const AdminDashboard = () => {
         {/* Header Bar */}
         <motion.div 
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', backgroundColor: 'white', padding: '20px 30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', backgroundColor: '#ffffff', padding: '20px 30px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}
         >
           <div>
-            <h1 style={{ fontFamily: 'var(--font-heading)', margin: 0, fontSize: '28px', color: 'var(--text-dark)' }}>
-              {activeTab === 'overview' ? 'System Overview' : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Database`}
+            <h1 style={{ fontFamily: 'var(--font-heading)', margin: 0, fontSize: '28px', color: '#0f172a' }}>
+              {activeTab === 'overview' ? 'System Overview' : activeTab === 'leaderboard' ? 'Global Leaderboard Management' : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Database`}
             </h1>
             <p style={{ margin: '5px 0 0 0', color: '#64748b', fontSize: '14px' }}>Real-time statistics and administrative controls.</p>
           </div>
           <button 
             onClick={fetchDashboardData} disabled={dataLoading}
-            style={{ padding: '10px 20px', backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
+            style={{ padding: '10px 20px', backgroundColor: '#f1f5f9', color: '#0f172a', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e2e8f0'}
             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
           >
@@ -256,11 +296,11 @@ const AdminDashboard = () => {
               {activeTab === 'overview' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
                   {statCards.map((stat, idx) => (
-                    <motion.div whileHover={{ y: -5 }} key={idx} style={{ background: 'white', padding: '30px', borderRadius: '20px', boxShadow: `0 10px 30px ${stat.shadow}`, position: 'relative', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.8)' }}>
+                    <motion.div whileHover={{ y: -5 }} key={idx} style={{ background: '#ffffff', padding: '30px', borderRadius: '20px', boxShadow: `0 10px 30px ${stat.shadow}`, position: 'relative', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                       <div style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
                           <p style={{ margin: '0 0 10px 0', color: '#64748b', fontSize: '15px', fontWeight: '600' }}>{stat.title}</p>
-                          <h3 style={{ margin: 0, fontSize: '42px', color: 'var(--text-dark)', fontFamily: 'var(--font-heading)' }}>{stat.value.toLocaleString()}</h3>
+                          <h3 style={{ margin: 0, fontSize: '42px', color: '#0f172a', fontFamily: 'var(--font-heading)' }}>{stat.value.toLocaleString()}</h3>
                         </div>
                         <div style={{ background: stat.bg, width: '60px', height: '60px', borderRadius: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: `0 8px 20px ${stat.shadow}` }}>
                           {stat.icon}
@@ -272,32 +312,33 @@ const AdminDashboard = () => {
               )}
 
               {/* STUDENTS TAB */}
-              {activeTab === 'students' && (
-                <div style={{ backgroundColor: 'white', borderRadius: '20px', boxShadow: '0 10px 40px rgba(0,0,0,0.03)', overflow: 'hidden', border: '1px solid #f1f5f9' }}>
-                  <div style={{ padding: '25px 30px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fafafa' }}>
-                    <h3 style={{ margin: 0, color: 'var(--text-dark)', fontSize: '18px' }}>Registered Students</h3>
+              {activeTab === 'students' && !selectedStudent && (
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                  <div style={{ padding: '25px 30px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc' }}>
+                    <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px' }}>Registered Students</h3>
                   </div>
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                       <thead>
-                        <tr style={{ backgroundColor: 'white', color: '#94a3b8', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Student Profile</th>
-                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Linked Institution</th>
-                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Location Details</th>
-                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Joined Date</th>
+                        <tr style={{ backgroundColor: '#ffffff', color: '#64748b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Student Profile</th>
+                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Linked Institution</th>
+                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Location Details</th>
+                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Joined Date</th>
+                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>Action</th>
                         </tr>
                       </thead>
                       <tbody>
                         {students.length === 0 ? (
-                          <tr><td colSpan="4" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No students found in the database.</td></tr>
+                          <tr><td colSpan="4" style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>No students found in the database.</td></tr>
                         ) : (
                           students.map(s => (
-                            <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <tr key={s.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
                               <td style={{ padding: '20px 30px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--primary-blue)', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold' }}>{s.full_name.charAt(0)}</div>
+                                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#3b82f6', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold' }}>{s.full_name.charAt(0)}</div>
                                   <div>
-                                    <div style={{ fontWeight: 'bold', color: 'var(--text-dark)', fontSize: '15px' }}>{s.full_name}</div>
+                                    <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '15px' }}>{s.full_name}</div>
                                     <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>ID: {s.custom_student_id} • {s.gender}</div>
                                   </div>
                                 </div>
@@ -305,16 +346,26 @@ const AdminDashboard = () => {
                               <td style={{ padding: '20px 30px' }}>
                                 {s.schools ? (
                                   <>
-                                    <div style={{ fontWeight: '600', color: 'var(--text-dark)', fontSize: '14px' }}>{s.schools.school_name}</div>
+                                    <div style={{ fontWeight: '600', color: '#0f172a', fontSize: '14px' }}>{s.schools.school_name}</div>
                                     <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>Ref: {s.schools.custom_school_id}</div>
                                   </>
-                                ) : <span style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#fee2e2', color: '#ef4444', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold' }}>Independent</span>}
+                                ) : <span style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', border: '1px solid rgba(239, 68, 68, 0.3)' }}>Independent</span>}
                               </td>
                               <td style={{ padding: '20px 30px' }}>
-                                <div style={{ fontWeight: '500', color: 'var(--text-dark)', fontSize: '14px' }}>{s.district}</div>
+                                <div style={{ fontWeight: '500', color: '#0f172a', fontSize: '14px' }}>{s.district}</div>
                                 <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>{s.state}</div>
                               </td>
                               <td style={{ padding: '20px 30px', fontSize: '14px', color: '#64748b' }}>{new Date(s.created_at).toLocaleDateString()}</td>
+                              <td style={{ padding: '20px 30px', textAlign: 'right' }}>
+                                <button 
+                                  onClick={() => handleViewStudent(s)}
+                                  style={{ backgroundColor: '#f1f5f9', color: '#0f172a', border: '1px solid #cbd5e1', padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e2e8f0'}
+                                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                                >
+                                  View Profile <ChevronRight size={14} />
+                                </button>
+                              </td>
                             </tr>
                           ))
                         )}
@@ -324,27 +375,140 @@ const AdminDashboard = () => {
                 </div>
               )}
 
+              {/* STUDENT OVERVIEW VIEW */}
+              {activeTab === 'students' && selectedStudent && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ backgroundColor: '#ffffff', borderRadius: '20px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                  
+                  {/* Header */}
+                  <div style={{ padding: '30px', backgroundColor: '#f8fafc', color: '#0f172a', borderBottom: '1px solid #e2e8f0' }}>
+                    <button onClick={() => setSelectedStudent(null)} style={{ background: 'transparent', border: 'none', color: '#64748b', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', marginBottom: '20px', fontSize: '13px', fontWeight: 'bold' }}>
+                      <ArrowLeft size={16} /> Back to Directory
+                    </button>
+                    
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#3b82f6', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '32px', fontWeight: 'bold', boxShadow: '0 10px 25px rgba(59, 130, 246, 0.4)' }}>
+                          {selectedStudent.full_name.charAt(0)}
+                        </div>
+                        <div>
+                          <h2 style={{ margin: 0, fontFamily: 'var(--font-heading)', fontSize: '28px' }}>{selectedStudent.full_name}</h2>
+                          <div style={{ fontSize: '14px', color: '#64748b', marginTop: '5px', display: 'flex', gap: '15px' }}>
+                            <span><strong>ID:</strong> {selectedStudent.custom_student_id}</span>
+                            <span><strong>Gender:</strong> {selectedStudent.gender}</span>
+                            <span><strong>DOB:</strong> {new Date(selectedStudent.date_of_birth).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ backgroundColor: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)', padding: '15px 25px', borderRadius: '12px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#b45309', fontFamily: 'monospace' }}>{selectedStudent.points?.toLocaleString()}</div>
+                        <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#b45309', fontWeight: 'bold' }}>Total Points</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '30px' }}>
+                    {/* Student Info Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginBottom: '40px' }}>
+                      <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <h4 style={{ margin: '0 0 15px 0', fontSize: '14px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '1px' }}>Contact & Location</h4>
+                        <div style={{ display: 'grid', gap: '10px', fontSize: '14px' }}>
+                          <div><strong style={{ color: '#0f172a' }}>Email:</strong> {selectedStudent.email}</div>
+                          <div><strong style={{ color: '#0f172a' }}>Phone:</strong> {selectedStudent.phone}</div>
+                          <div><strong style={{ color: '#0f172a' }}>District:</strong> {selectedStudent.district}</div>
+                          <div><strong style={{ color: '#0f172a' }}>State:</strong> {selectedStudent.state}</div>
+                          <div><strong style={{ color: '#0f172a' }}>Address:</strong> {selectedStudent.address}</div>
+                        </div>
+                      </div>
+                      <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <h4 style={{ margin: '0 0 15px 0', fontSize: '14px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '1px' }}>Institution Details</h4>
+                        {selectedStudent.schools ? (
+                          <div style={{ display: 'grid', gap: '10px', fontSize: '14px' }}>
+                            <div><strong style={{ color: '#0f172a' }}>School Name:</strong> {selectedStudent.schools.school_name}</div>
+                            <div><strong style={{ color: '#0f172a' }}>School ID:</strong> {selectedStudent.schools.custom_school_id}</div>
+                            <div style={{ marginTop: '10px', padding: '8px 12px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#059669', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', display: 'inline-block' }}>Verified Affiliation</div>
+                          </div>
+                        ) : (
+                          <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
+                            Participating as an Independent Candidate. No school affiliated.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Participation History */}
+                    <h3 style={{ fontSize: '18px', color: '#0f172a', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}><Trophy size={20} color="#3b82f6" /> Competition History & Rankings</h3>
+                    
+                    {loadingStudent ? (
+                      <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading performances...</div>
+                    ) : studentPerformances.length === 0 ? (
+                      <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', color: '#64748b' }}>
+                        This student hasn't recorded any competition performances yet.
+                      </div>
+                    ) : (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                          <thead>
+                            <tr style={{ backgroundColor: '#f8fafc', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' }}>
+                              <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>Event Name</th>
+                              <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>Program</th>
+                              <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>Score / Time</th>
+                              <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0', textAlign: 'center' }}>District Rank</th>
+                              <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0', textAlign: 'center' }}>State Rank</th>
+                              <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0', textAlign: 'center' }}>National Rank</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {studentPerformances.map((perf, idx) => (
+                              <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                <td style={{ padding: '15px 20px', fontWeight: 'bold', color: '#0f172a' }}>{perf.events?.name}</td>
+                                <td style={{ padding: '15px 20px', color: '#64748b', textTransform: 'capitalize' }}>{perf.events?.sport_category || 'General'}</td>
+                                <td style={{ padding: '15px 20px', fontWeight: 'bold', color: '#3b82f6' }}>{perf.metric_value} <span style={{ fontSize: '10px', color: '#94a3b8' }}>{perf.events?.event_type}</span></td>
+                                <td style={{ padding: '15px 20px', textAlign: 'center' }}>
+                                  <span style={{ padding: '4px 8px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', backgroundColor: perf.district_rank <= 3 ? 'rgba(16, 185, 129, 0.1)' : '#f1f5f9', color: perf.district_rank <= 3 ? '#059669' : '#64748b' }}>
+                                    {perf.district_rank ? `#${perf.district_rank}` : 'N/A'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '15px 20px', textAlign: 'center' }}>
+                                  <span style={{ padding: '4px 8px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', backgroundColor: perf.state_rank <= 3 ? 'rgba(59, 130, 246, 0.1)' : '#f1f5f9', color: perf.state_rank <= 3 ? '#2563eb' : '#64748b' }}>
+                                    {perf.state_rank ? `#${perf.state_rank}` : 'N/A'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '15px 20px', textAlign: 'center' }}>
+                                  <span style={{ padding: '4px 8px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', backgroundColor: perf.national_rank <= 3 ? 'rgba(251, 191, 36, 0.2)' : '#f1f5f9', color: perf.national_rank <= 3 ? '#b45309' : '#64748b' }}>
+                                    {perf.national_rank ? `#${perf.national_rank}` : 'N/A'}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
               {/* SCHOOLS TAB */}
               {activeTab === 'schools' && (
-                <div style={{ backgroundColor: 'white', borderRadius: '20px', boxShadow: '0 10px 40px rgba(0,0,0,0.03)', overflow: 'hidden', border: '1px solid #f1f5f9' }}>
-                  <div style={{ padding: '25px 30px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fafafa' }}>
-                    <h3 style={{ margin: 0, color: 'var(--text-dark)', fontSize: '18px' }}>Registered Institutions</h3>
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                  <div style={{ padding: '25px 30px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc' }}>
+                    <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px' }}>Registered Institutions</h3>
                   </div>
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                       <thead>
-                        <tr style={{ backgroundColor: 'white', color: '#94a3b8', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Institution Details</th>
-                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Principal Contact</th>
-                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Location</th>
+                        <tr style={{ backgroundColor: '#ffffff', color: '#64748b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Institution Details</th>
+                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Principal Contact</th>
+                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Location</th>
                         </tr>
                       </thead>
                       <tbody>
                         {schools.map(s => (
-                          <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <tr key={s.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
                             <td style={{ padding: '20px 30px', fontWeight: 'bold' }}>{s.school_name}</td>
-                            <td style={{ padding: '20px 30px' }}>{s.principal_name} <br/><span style={{fontSize:'12px', color:'gray'}}>{s.email}</span></td>
-                            <td style={{ padding: '20px 30px' }}>{s.district}, {s.state}</td>
+                            <td style={{ padding: '20px 30px' }}>{s.principal_name} <br/><span style={{fontSize:'12px', color:'#94a3b8'}}>{s.email}</span></td>
+                            <td style={{ padding: '20px 30px', color: '#64748b' }}>{s.district}, {s.state}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -376,8 +540,8 @@ const AdminDashboard = () => {
                   {/* Event Creation Form */}
                   <AnimatePresence>
                     {showEventForm && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ backgroundColor: 'white', borderRadius: '20px', overflow: 'hidden', border: '1px solid #f1f5f9' }}>
-                        <div style={{ padding: '25px 30px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', backgroundColor: '#fafafa' }}>
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ backgroundColor: '#ffffff', borderRadius: '20px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                        <div style={{ padding: '25px 30px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', backgroundColor: '#f8fafc' }}>
                           <h3 style={{ margin: 0 }}>Event Configuration</h3>
                           <button onClick={() => setShowEventForm(false)} style={{ background: 'transparent', border: 'none', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer' }}>Cancel</button>
                         </div>
@@ -438,7 +602,7 @@ const AdminDashboard = () => {
                             </div>
                           </div>
                           
-                          <button type="submit" disabled={isCreatingEvent} style={{ padding: '14px 30px', backgroundColor: 'var(--primary-blue)', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold' }}>
+                          <button type="submit" disabled={isCreatingEvent} style={{ padding: '14px 30px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold' }}>
                             {isCreatingEvent ? 'Broadcasting...' : 'Publish Competition'}
                           </button>
                         </form>
@@ -447,34 +611,34 @@ const AdminDashboard = () => {
                   </AnimatePresence>
 
                   {/* Events List */}
-                  <div style={{ backgroundColor: 'white', borderRadius: '20px', boxShadow: '0 10px 40px rgba(0,0,0,0.03)', overflow: 'hidden', border: '1px solid #f1f5f9' }}>
-                    <div style={{ padding: '25px 30px', borderBottom: '1px solid #f1f5f9', backgroundColor: '#fafafa' }}>
-                      <h3 style={{ margin: 0, color: 'var(--text-dark)', fontSize: '18px' }}>Active Competitions</h3>
+                  <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                    <div style={{ padding: '25px 30px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+                      <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px' }}>Active Competitions</h3>
                     </div>
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
-                          <tr style={{ backgroundColor: 'white', color: '#94a3b8', fontSize: '12px', textTransform: 'uppercase' }}>
-                            <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Competition Name</th>
-                            <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Schedule & Venue</th>
-                            <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>Scoring</th>
+                          <tr style={{ backgroundColor: '#ffffff', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' }}>
+                            <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Competition Name</th>
+                            <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Schedule & Venue</th>
+                            <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>Scoring</th>
                           </tr>
                         </thead>
                         <tbody>
                           {events.map(ev => (
-                            <tr key={ev.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <tr key={ev.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
                               <td style={{ padding: '20px 30px' }}>
-                                <div style={{ fontWeight: 'bold', color: 'var(--text-dark)', fontSize: '15px' }}>{ev.name}</div>
+                                <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '15px' }}>{ev.name}</div>
                                 <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px', textTransform: 'capitalize' }}>Program: {ev.sport_category || 'General'} • {ev.age_category}</div>
                               </td>
                               <td style={{ padding: '20px 30px' }}>
-                                <div style={{ fontWeight: '500', color: 'var(--text-dark)', fontSize: '14px' }}>{new Date(ev.event_date).toLocaleDateString()}</div>
+                                <div style={{ fontWeight: '500', color: '#0f172a', fontSize: '14px' }}>{new Date(ev.event_date).toLocaleDateString()}</div>
                                 <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>{ev.venue}</div>
                               </td>
                               <td style={{ padding: '20px 30px', textAlign: 'right' }}>
                                 <button 
                                   onClick={() => handleOpenScoring(ev)}
-                                  style={{ backgroundColor: 'var(--accent-orange)', color: 'white', padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 10px rgba(249, 115, 22, 0.3)' }}
+                                  style={{ backgroundColor: '#3b82f6', color: 'white', padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 10px rgba(59, 130, 246, 0.3)' }}
                                 >
                                   Manage Scores <ChevronRight size={16} />
                                 </button>
@@ -490,18 +654,18 @@ const AdminDashboard = () => {
 
               {/* EVENT SCORING VIEW */}
               {activeTab === 'events' && scoringEvent && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ backgroundColor: 'white', borderRadius: '20px', boxShadow: '0 10px 40px rgba(0,0,0,0.03)', overflow: 'hidden', border: '1px solid #f1f5f9' }}>
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ backgroundColor: '#ffffff', borderRadius: '20px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                   
                   {/* Header */}
-                  <div style={{ padding: '30px', backgroundColor: 'var(--primary-dark)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ padding: '30px', backgroundColor: '#f8fafc', color: '#0f172a', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
                     <div>
-                      <button onClick={() => setScoringEvent(null)} style={{ background: 'transparent', border: 'none', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', marginBottom: '10px', fontSize: '13px', fontWeight: 'bold' }}>
+                      <button onClick={() => setScoringEvent(null)} style={{ background: 'transparent', border: 'none', color: '#64748b', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', marginBottom: '10px', fontSize: '13px', fontWeight: 'bold' }}>
                         <ArrowLeft size={16} /> Back to Events
                       </button>
                       <h2 style={{ margin: 0, fontFamily: 'var(--font-heading)', fontSize: '24px' }}>{scoringEvent.name}</h2>
                       <div style={{ marginTop: '5px', opacity: 0.8, fontSize: '14px' }}>{scoringEvent.venue} • {scoringEvent.age_category} • {scoringEvent.event_type} Metric</div>
                     </div>
-                    <div style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '15px 25px', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: '15px 25px', borderRadius: '12px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
                       <div style={{ fontSize: '24px', fontWeight: 'bold', fontFamily: 'var(--font-heading)' }}>{participants.length}</div>
                       <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>Participants</div>
                     </div>
@@ -509,7 +673,7 @@ const AdminDashboard = () => {
 
                   {/* Scoring Table */}
                   <div style={{ padding: '30px' }}>
-                    <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '15px', color: '#1e40af', fontSize: '14px', marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '12px', padding: '15px', color: '#60a5fa', fontSize: '14px', marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <CheckCircle size={18} /> Enter scores and click Save. The database will automatically generate National, State, and District ranks live!
                     </div>
 
@@ -524,13 +688,13 @@ const AdminDashboard = () => {
                       </thead>
                       <tbody>
                         {participants.length === 0 ? (
-                          <tr><td colSpan="4" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No students have registered for this event yet.</td></tr>
+                          <tr><td colSpan="4" style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>No students have registered for this event yet.</td></tr>
                         ) : (
                           participants.map(p => (
-                            <tr key={p.student_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                              <td style={{ padding: '20px', fontWeight: 'bold', color: 'var(--text-dark)' }}>
+                            <tr key={p.student_id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                              <td style={{ padding: '20px', fontWeight: 'bold', color: '#0f172a' }}>
                                 {p.students?.full_name} <br/>
-                                <span style={{ fontWeight: 'normal', fontSize: '12px', color: '#94a3b8' }}>{p.students?.custom_student_id}</span>
+                                <span style={{ fontWeight: 'normal', fontSize: '12px', color: '#64748b' }}>{p.students?.custom_student_id}</span>
                               </td>
                               <td style={{ padding: '20px', color: '#64748b', fontSize: '14px' }}>
                                 {p.students?.schools?.school_name || 'Independent'}
@@ -542,7 +706,7 @@ const AdminDashboard = () => {
                                   value={scores[p.student_id] || ''}
                                   onChange={(e) => setScores({...scores, [p.student_id]: e.target.value})}
                                   placeholder={scoringEvent.event_type === 'TIME' ? 'e.g. 12.5' : 'e.g. 100'}
-                                  style={{ width: '100%', padding: '12px 15px', borderRadius: '8px', border: '2px solid #e2e8f0', outline: 'none', fontSize: '15px', fontWeight: 'bold', color: 'var(--primary-blue)' }}
+                                  style={{ width: '100%', padding: '12px 15px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '15px', fontWeight: 'bold', color: '#60a5fa', backgroundColor: '#f8fafc' }}
                                 />
                               </td>
                               <td style={{ padding: '20px', textAlign: 'right' }}>
@@ -551,7 +715,7 @@ const AdminDashboard = () => {
                                   disabled={savingScore === p.student_id}
                                   style={{ 
                                     padding: '10px 15px', 
-                                    backgroundColor: savedStatus[p.student_id] ? '#10b981' : 'var(--primary-blue)', 
+                                    backgroundColor: savedStatus[p.student_id] ? '#10b981' : '#3b82f6', 
                                     color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto',
                                     transition: 'background-color 0.3s'
                                   }}
@@ -567,6 +731,57 @@ const AdminDashboard = () => {
                     </table>
                   </div>
                 </motion.div>
+              )}
+
+              {/* LEADERBOARD TAB */}
+              {activeTab === 'leaderboard' && (
+                <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                  <div style={{ padding: '25px 30px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc' }}>
+                    <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}><Crown size={20} color="#fbbf24"/> Global Points Leaderboard</h3>
+                  </div>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#ffffff', color: '#64748b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0', width: '80px' }}>Rank</th>
+                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Student Profile</th>
+                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Linked Institution</th>
+                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>Total Points</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {leaderboard.length === 0 ? (
+                          <tr><td colSpan="4" style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>No points awarded yet.</td></tr>
+                        ) : (
+                          leaderboard.map((s, index) => (
+                            <tr key={s.id} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: index < 3 ? 'rgba(251, 191, 36, 0.05)' : 'transparent' }}>
+                              <td style={{ padding: '20px 30px', fontWeight: 'bold', fontSize: '18px', color: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : '#64748b' }}>
+                                #{index + 1}
+                              </td>
+                              <td style={{ padding: '20px 30px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: index < 3 ? (index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : '#b45309') : '#3b82f6', color: index < 3 ? '#0f172a' : 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold' }}>{s.full_name.charAt(0)}</div>
+                                  <div>
+                                    <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '15px' }}>{s.full_name}</div>
+                                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>ID: {s.custom_student_id}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td style={{ padding: '20px 30px' }}>
+                                {s.schools ? (
+                                  <div style={{ fontWeight: '600', color: '#334155', fontSize: '14px' }}>{s.schools.school_name}</div>
+                                ) : <span style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold' }}>Independent</span>}
+                              </td>
+                              <td style={{ padding: '20px 30px', textAlign: 'right' }}>
+                                <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24', fontFamily: 'monospace' }}>{s.points?.toLocaleString()}</div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               )}
 
             </motion.div>
@@ -625,14 +840,14 @@ const AdminLogin = ({ forceAdminLogin }) => {
           <div>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', color: '#475569', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Username</label>
             <div style={{ position: 'relative' }}>
-              <Users size={18} style={{ position: 'absolute', left: '15px', top: '15px', color: '#94a3b8' }} />
+              <Users size={18} style={{ position: 'absolute', left: '15px', top: '15px', color: '#64748b' }} />
               <input type="text" required value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: '100%', padding: '14px 15px 14px 45px', borderRadius: '12px', border: '2px solid #f1f5f9', outline: 'none', fontSize: '15px', transition: 'all 0.2s', backgroundColor: '#f8fafc' }} />
             </div>
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', color: '#475569', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Password</label>
             <div style={{ position: 'relative' }}>
-              <Lock size={18} style={{ position: 'absolute', left: '15px', top: '15px', color: '#94a3b8' }} />
+              <Lock size={18} style={{ position: 'absolute', left: '15px', top: '15px', color: '#64748b' }} />
               <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: '100%', padding: '14px 15px 14px 45px', borderRadius: '12px', border: '2px solid #f1f5f9', outline: 'none', fontSize: '15px', transition: 'all 0.2s', backgroundColor: '#f8fafc' }} />
             </div>
           </div>

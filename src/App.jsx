@@ -12,6 +12,9 @@ import AdminDashboard from './pages/dashboards/AdminDashboard';
 import SchoolDashboard from './pages/dashboards/SchoolDashboard';
 import StudentDashboard from './pages/dashboards/StudentDashboard';
 import Events from './pages/Events';
+import Games from './pages/Games';
+import Leaderboard from './pages/Leaderboard';
+import Certificate from './pages/Certificate';
 import './App.css';
 
 function App() {
@@ -31,6 +34,9 @@ function App() {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/dashboard/school" element={<SchoolDashboard />} />
           <Route path="/dashboard/student" element={<StudentDashboard />} />
+          <Route path="/games" element={<Games />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/certificate/:eventId/:studentId" element={<Certificate />} />
         </Routes>
         <Footer />
       </div>

@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Navigate, Link } from 'react-router-dom';
 import { Trophy, Medal, Star, Target, MapPin, Calendar, Activity, ArrowRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const StudentDashboard = () => {
   const { role, profile, loading } = useAuth();
@@ -11,6 +11,9 @@ const StudentDashboard = () => {
   const [myEvents, setMyEvents] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [bestRank, setBestRank] = useState({ air: '--', state: '--', district: '--' });
+  const [isBirthday, setIsBirthday] = useState(false);
+  const [showBirthdayModal, setShowBirthdayModal] = useState(false);
+  const [points, setPoints] = useState(0);
 
   useEffect(() => {
     if (role === 'student' && profile) {
@@ -23,6 +26,21 @@ const StudentDashboard = () => {
     try {
       console.log("Fetching for profile ID:", profile.id);
       
+      // 0. Fetch user points explicitly
+      const { data: userData } = await supabase.from('students').select('points, dob').eq('id', profile.id).single();
+      if (userData) {
+        setPoints(userData.points || 0);
+        // Check birthday
+        if (userData.dob) {
+          const dobDate = new Date(userData.dob);
+          const today = new Date();
+          if (dobDate.getMonth() === today.getMonth() && dobDate.getDate() === today.getDate()) {
+            setIsBirthday(true);
+            setShowBirthdayModal(true);
+          }
+        }
+      }
+
       // 1. Fetch Registrations
       const { data: registrations, error: regError } = await supabase
         .from('event_participants')
@@ -111,7 +129,7 @@ const StudentDashboard = () => {
               </div>
             )}
           </div>
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '5px' }}>
               <h1 style={{ fontFamily: 'var(--font-heading)', margin: 0, fontSize: '32px', color: 'var(--text-dark)' }}>{profile.full_name}</h1>
               <span style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary-blue)', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>Student Account</span>
@@ -121,6 +139,12 @@ const StudentDashboard = () => {
               <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><MapPin size={16}/> {profile.district}, {profile.state}</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Target size={16}/> {profile.schools?.school_name || 'Independent Participant'}</span>
             </div>
+          </div>
+          
+          <div style={{ textAlign: 'center', backgroundColor: '#fffbeb', padding: '15px 25px', borderRadius: '16px', border: '1px solid #fde68a', boxShadow: '0 10px 20px rgba(251,191,36,0.1)' }}>
+            <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#b45309', fontWeight: 'bold', letterSpacing: '1px' }}>Global Points</div>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#fbbf24', fontFamily: 'monospace' }}>{points.toLocaleString()}</div>
+            <Link to="/games" style={{ display: 'inline-block', marginTop: '5px', fontSize: '12px', color: 'var(--primary-blue)', textDecoration: 'none', fontWeight: 'bold' }}>Play & Earn +</Link>
           </div>
         </div>
       </div>
@@ -187,6 +211,7 @@ const StudentDashboard = () => {
                     <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Performance Score</th>
                     <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>All India Rank</th>
                     <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>State Rank</th>
+                    <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>Certificate</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -221,6 +246,20 @@ const StudentDashboard = () => {
                           <span style={{ color: '#cbd5e1' }}>--</span>
                         )}
                       </td>
+                      <td style={{ padding: '20px 30px', textAlign: 'right' }}>
+                        {event.rank ? (
+                          <Link 
+                            to={`/certificate/${event.event_id}/${profile.id}`} 
+                            style={{ padding: '8px 16px', backgroundColor: '#eff6ff', color: 'var(--primary-blue)', border: '1px solid #bfdbfe', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textDecoration: 'none', display: 'inline-block', transition: 'all 0.2s' }}
+                            onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-blue)'; e.currentTarget.style.color = 'white'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; e.currentTarget.style.color = 'var(--primary-blue)'; }}
+                          >
+                            Download
+                          </Link>
+                        ) : (
+                          <span style={{ fontSize: '12px', color: '#94a3b8' }}>Pending</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -230,6 +269,41 @@ const StudentDashboard = () => {
         </div>
 
       </div>
+      
+      {/* Birthday Modal */}
+      <AnimatePresence>
+        {showBirthdayModal && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}
+            onClick={() => setShowBirthdayModal(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.8, y: 50 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.8, y: 50 }}
+              style={{ backgroundColor: 'white', padding: '50px', borderRadius: '30px', textAlign: 'center', maxWidth: '500px', position: 'relative', overflow: 'hidden' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Confetti effect using framer motion divs for simplicity */}
+              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 10, ease: 'linear' }} style={{ width: '200px', height: '200px', position: 'absolute', top: '-100px', left: '-100px', background: 'radial-gradient(circle, rgba(251,191,36,0.3) 0%, rgba(255,255,255,0) 70%)' }} />
+              <motion.div animate={{ rotate: -360 }} transition={{ repeat: Infinity, duration: 10, ease: 'linear' }} style={{ width: '200px', height: '200px', position: 'absolute', bottom: '-100px', right: '-100px', background: 'radial-gradient(circle, rgba(16,185,129,0.3) 0%, rgba(255,255,255,0) 70%)' }} />
+              
+              <div style={{ fontSize: '64px', marginBottom: '10px' }}>🎂</div>
+              <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '36px', color: 'var(--primary-dark)', margin: '0 0 15px 0' }}>Happy Birthday!</h2>
+              <p style={{ color: '#64748b', fontSize: '18px', marginBottom: '30px' }}>
+                Wishing you a fantastic day filled with joy and success. Keep being amazing, <strong style={{color: 'var(--primary-blue)'}}>{profile.full_name}</strong>!
+              </p>
+              
+              <button 
+                onClick={() => setShowBirthdayModal(false)}
+                style={{ backgroundColor: 'var(--accent-orange)', color: 'white', border: 'none', padding: '12px 30px', fontSize: '16px', fontWeight: 'bold', borderRadius: '12px', cursor: 'pointer' }}
+              >
+                Thank You!
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };
