@@ -78,7 +78,7 @@ const Games = () => {
           viewport={{ once: true, margin: "-100px" }}
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))',
             gap: '30px'
           }}
         >

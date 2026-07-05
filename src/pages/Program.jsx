@@ -213,7 +213,7 @@ const Program = () => {
       {/* EVENT SELECTOR */}
       <section style={{ padding: '40px 0 0 0', backgroundColor: 'var(--white)' }}>
         <div className="container" style={{ display: 'flex', justifyContent: 'center' }}>
-          <div style={{ backgroundColor: '#f8fafc', padding: '20px 40px', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+          <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', width: '100%' }}>
             <div style={{ fontWeight: 'bold', color: 'var(--text-dark)', fontSize: '16px' }}>Select Competition:</div>
             
             {loadingEvents ? (
@@ -225,7 +225,7 @@ const Program = () => {
                 <select 
                   value={selectedEventId || ''} 
                   onChange={(e) => setSelectedEventId(e.target.value)}
-                  style={{ appearance: 'none', padding: '12px 40px 12px 20px', fontSize: '15px', fontWeight: 'bold', color: 'var(--primary-blue)', backgroundColor: 'white', border: '2px solid var(--primary-blue)', borderRadius: '8px', cursor: 'pointer', outline: 'none', width: '300px' }}
+                  style={{ appearance: 'none', padding: '12px 40px 12px 20px', fontSize: '15px', fontWeight: 'bold', color: 'var(--primary-blue)', backgroundColor: 'white', border: '2px solid var(--primary-blue)', borderRadius: '8px', cursor: 'pointer', outline: 'none', width: '100%', minWidth: '250px', maxWidth: '350px' }}
                 >
                   {events.map(ev => (
                     <option key={ev.id} value={ev.id}>{ev.name} ({ev.age_category})</option>
@@ -251,7 +251,7 @@ const Program = () => {
           ) : rankings.length === 0 && events.length > 0 ? (
             <div style={{ textAlign: 'center', padding: '50px', color: '#64748b' }}>No scores submitted for this event yet.</div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '30px' }}>
               {topPerformers.map((rank, index) => (
                 <motion.div 
                   key={rank.id}
@@ -302,7 +302,7 @@ const Program = () => {
               </div>
 
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '700px' }}>
+                <div style={{ overflowX: 'auto', width: '100%' }}><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '700px' }}>
                   <thead>
                     <tr style={{ backgroundColor: 'var(--bg-light)', color: 'var(--text-light)', fontSize: '13px', textTransform: 'uppercase' }}>
                       <th style={{ padding: '15px 20px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>Rank</th>
@@ -349,7 +349,7 @@ const Program = () => {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table></div>
               </div>
 
               {/* Pagination Controls */}

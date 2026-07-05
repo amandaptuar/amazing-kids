@@ -172,7 +172,7 @@ const Header = () => {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            style={{ overflow: 'hidden', backgroundColor: 'rgba(255, 255, 255, 0.98)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}
+            style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 80px)', backgroundColor: 'rgba(255, 255, 255, 0.98)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}
           >
             <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
               {navLinks.map((link, index) => (

@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Users, Building, Calendar, Trophy, Lock, Search, ChevronRight, PlusCircle, LayoutDashboard, Settings, ArrowLeft, Save, CheckCircle, Crown } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
+import Swal from 'sweetalert2';
 
 const AdminDashboard = () => {
   const { role, loading, forceAdminLogin } = useAuth();
@@ -150,19 +151,19 @@ const AdminDashboard = () => {
     
     // Explicit Validation
     if (eventData.date < today) {
-      alert("Event date cannot be in the past.");
+      Swal.fire({ title: 'Invalid Date', text: "Event date cannot be in the past.", icon: 'warning' });
       return;
     }
     if (eventData.reg_start < today) {
-      alert("Registration start date cannot be in the past.");
+      Swal.fire({ title: 'Invalid Date', text: "Registration start date cannot be in the past.", icon: 'warning' });
       return;
     }
     if (eventData.reg_end < eventData.reg_start) {
-      alert("Registration end date cannot be before registration start date.");
+      Swal.fire({ title: 'Invalid Date', text: "Registration end date cannot be before registration start date.", icon: 'warning' });
       return;
     }
     if (eventData.reg_end >= eventData.date) {
-      alert("Registration must end before the event date.");
+      Swal.fire({ title: 'Invalid Date', text: "Registration must end before the event date.", icon: 'warning' });
       return;
     }
 
@@ -182,12 +183,12 @@ const AdminDashboard = () => {
       
       if (error) throw error;
       
-      alert("Event created successfully!");
+      Swal.fire({ title: 'Success!', text: "Event created successfully!", icon: 'success' });
       setShowEventForm(false);
       setEventData({ name: '', date: '', venue: '', age_category: '', type: 'TIME', sport_category: '', reg_start: '', reg_end: '' });
       fetchDashboardData();
     } catch (err) {
-      alert("Error creating event: " + err.message + "\n\nPlease ensure you ran the RLS SQL fix for events.");
+      Swal.fire({ title: 'Error', text: "Error creating event: " + err.message + "\n\nPlease ensure you ran the RLS SQL fix for events.", icon: 'error' });
     } finally {
       setIsCreatingEvent(false);
     }
@@ -237,7 +238,7 @@ const AdminDashboard = () => {
   const handleSaveScore = async (studentId) => {
     const value = scores[studentId];
     if (!value) {
-      alert("Please enter a valid score/time.");
+      Swal.fire({ title: 'Invalid Score', text: "Please enter a valid score/time.", icon: 'warning' });
       return;
     }
 
@@ -259,7 +260,7 @@ const AdminDashboard = () => {
       }, 3000);
       
     } catch (err) {
-      alert("Error saving score: " + err.message + "\nDid you run the SQL bypass for performances?");
+      Swal.fire({ title: 'Error', text: "Error saving score: " + err.message + "\nDid you run the SQL bypass for performances?", icon: 'error' });
     } finally {
       setSavingScore(null);
     }
@@ -375,7 +376,7 @@ const AdminDashboard = () => {
               
               {/* OVERVIEW TAB */}
               {activeTab === 'overview' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '24px' }}>
                   {statCards.map((stat, idx) => (
                     <motion.div whileHover={{ y: -5 }} key={idx} style={{ background: '#ffffff', padding: '30px', borderRadius: '20px', boxShadow: `0 10px 30px ${stat.shadow}`, position: 'relative', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                       <div style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -409,7 +410,7 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                   <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <div style={{ overflowX: 'auto', width: '100%' }}><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                       <thead>
                         <tr style={{ backgroundColor: '#ffffff', color: '#64748b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                           <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Student Profile</th>
@@ -461,7 +462,7 @@ const AdminDashboard = () => {
                           ))
                         )}
                       </tbody>
-                    </table>
+                    </table></div>
                   </div>
                 </div>
               )}
@@ -560,7 +561,7 @@ const AdminDashboard = () => {
                       </div>
                     ) : (
                       <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <div style={{ overflowX: 'auto', width: '100%' }}><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                           <thead>
                             <tr style={{ backgroundColor: '#f8fafc', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' }}>
                               <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>Event Name</th>
@@ -595,7 +596,7 @@ const AdminDashboard = () => {
                               </tr>
                             ))}
                           </tbody>
-                        </table>
+                        </table></div>
                       </div>
                     )}
                   </div>
@@ -619,7 +620,7 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                   <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <div style={{ overflowX: 'auto', width: '100%' }}><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                       <thead>
                         <tr style={{ backgroundColor: '#ffffff', color: '#64748b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                           <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Institution Details</th>
@@ -655,7 +656,7 @@ const AdminDashboard = () => {
                           ))
                         )}
                       </tbody>
-                    </table>
+                    </table></div>
                   </div>
                 </div>
               )}
@@ -759,7 +760,7 @@ const AdminDashboard = () => {
                       <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px' }}>Active Competitions</h3>
                     </div>
                     <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <div style={{ overflowX: 'auto', width: '100%' }}><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
                           <tr style={{ backgroundColor: '#ffffff', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' }}>
                             <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Competition Name</th>
@@ -789,7 +790,7 @@ const AdminDashboard = () => {
                             </tr>
                           ))}
                         </tbody>
-                      </table>
+                      </table></div>
                     </div>
                   </div>
                 </div>
@@ -820,7 +821,7 @@ const AdminDashboard = () => {
                       <CheckCircle size={18} /> Enter scores and click Save. The database will automatically generate National, State, and District ranks live!
                     </div>
 
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <div style={{ overflowX: 'auto', width: '100%' }}><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                       <thead>
                         <tr style={{ backgroundColor: '#f8fafc', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' }}>
                           <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>Student ID & Name</th>
@@ -871,7 +872,7 @@ const AdminDashboard = () => {
                           ))
                         )}
                       </tbody>
-                    </table>
+                    </table></div>
                   </div>
                 </motion.div>
               )}
@@ -883,7 +884,7 @@ const AdminDashboard = () => {
                     <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}><Crown size={20} color="#fbbf24"/> Global Points Leaderboard</h3>
                   </div>
                   <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <div style={{ overflowX: 'auto', width: '100%' }}><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                       <thead>
                         <tr style={{ backgroundColor: '#ffffff', color: '#64748b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                           <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0', width: '80px' }}>Rank</th>
@@ -922,7 +923,7 @@ const AdminDashboard = () => {
                           ))
                         )}
                       </tbody>
-                    </table>
+                    </table></div>
                   </div>
                 </div>
               )}
@@ -991,7 +992,7 @@ const AdminDashboard = () => {
                       </div>
                     ) : (
                       <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <div style={{ overflowX: 'auto', width: '100%' }}><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                           <thead>
                             <tr style={{ backgroundColor: '#f8fafc', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' }}>
                               <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>Student Name</th>
@@ -1010,7 +1011,7 @@ const AdminDashboard = () => {
                               </tr>
                             ))}
                           </tbody>
-                        </table>
+                        </table></div>
                       </div>
                     )}
                   </div>

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Target, Gift, X, AlertCircle, ShoppingBag, Zap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import Swal from 'sweetalert2';
 import { useNavigate } from 'react-router-dom';
 
 const Store = () => {
@@ -83,11 +84,26 @@ const Store = () => {
     }
 
     if (points < goodie.cost) {
-      alert(`Insufficient points! You need ${goodie.cost - points} more points to redeem the ${goodie.name}. Play games or win tournaments to earn more!`);
+      Swal.fire({
+        title: 'Insufficient Points',
+        text: `You need ${goodie.cost - points} more points to redeem the ${goodie.name}. Play games or win tournaments to earn more!`,
+        icon: 'warning',
+        confirmButtonColor: '#3b82f6'
+      });
       return;
     }
     
-    if (window.confirm(`Are you sure you want to spend ${goodie.cost} points on ${goodie.name}?`)) {
+    const result = await Swal.fire({
+      title: 'Confirm Redemption',
+      text: `Are you sure you want to spend ${goodie.cost} points on ${goodie.name}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#ef4444',
+      confirmButtonText: 'Yes, redeem it!'
+    });
+
+    if (result.isConfirmed) {
       setRedeemingId(goodie.id);
       try {
         const newPoints = points - goodie.cost;
@@ -96,9 +112,19 @@ const Store = () => {
         if (error) throw error;
         
         setPoints(newPoints);
-        alert(`🎉 Success! You have successfully redeemed the ${goodie.name}. It will be shipped to your registered address or school.`);
+        Swal.fire({
+          title: 'Success!',
+          text: `You have successfully redeemed the ${goodie.name}. It will be shipped to your registered address or school.`,
+          icon: 'success',
+          confirmButtonColor: '#10b981'
+        });
       } catch (error) {
-        alert("An error occurred while redeeming. Please try again later.");
+        Swal.fire({
+          title: 'Error',
+          text: 'An error occurred while redeeming. Please try again later.',
+          icon: 'error',
+          confirmButtonColor: '#ef4444'
+        });
       } finally {
         setRedeemingId(null);
       }
@@ -106,7 +132,7 @@ const Store = () => {
   };
 
   return (
-    <main style={{ backgroundColor: '#f8fafc', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'var(--font-body)' }}>
+    <main style={{ backgroundColor: '#f8fafc', minHeight: '100vh', paddingTop: '100px', paddingBottom: '80px', fontFamily: 'var(--font-body)' }}>
       
       {/* Login Popup Modal */}
       <AnimatePresence>

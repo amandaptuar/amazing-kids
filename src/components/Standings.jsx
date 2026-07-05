@@ -36,7 +36,7 @@ const Standings = () => {
           }}
         >
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
+            <div style={{ overflowX: 'auto', width: '100%' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
               <thead>
                 <tr style={{ backgroundColor: 'var(--primary-dark)', color: 'white', fontFamily: 'var(--font-heading)' }}>
                   <th style={{ padding: '15px 20px', textAlign: 'center' }}>POS</th>
@@ -84,7 +84,7 @@ const Standings = () => {
                   </motion.tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </div>
         </motion.div>
       </div>

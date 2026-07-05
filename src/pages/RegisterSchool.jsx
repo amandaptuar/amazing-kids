@@ -4,6 +4,7 @@ import { registerSchool } from '../services/authAPI';
 import { Building, MapPin, Phone, Mail, Lock, ArrowRight, User, ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import * as india from '../lib/indiaData';
+import Swal from 'sweetalert2';
 
 const RegisterSchool = () => {
   const [formData, setFormData] = useState({
@@ -23,7 +24,12 @@ const RegisterSchool = () => {
       await registerSchool(formData);
       window.location.href = '/dashboard/school';
     } catch (error) {
-      alert(error.message);
+      Swal.fire({
+        title: 'Registration Failed',
+        text: error.message,
+        icon: 'error',
+        confirmButtonColor: '#ef4444'
+      });
     } finally {
       setLoading(false);
     }
@@ -56,7 +62,7 @@ const RegisterSchool = () => {
         <form onSubmit={handleSubmit} style={{ padding: '40px' }}>
           
           <h3 style={{ fontSize: '18px', color: '#ef4444', marginBottom: '25px', borderBottom: '2px solid rgba(239, 68, 68, 0.1)', paddingBottom: '10px' }}>Institution Details</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '20px' }}>
             <div style={inputGroupStyle}>
               <label style={labelStyle}>School Name</label>
               <div style={inputContainerStyle}>
@@ -75,7 +81,7 @@ const RegisterSchool = () => {
           </div>
 
           <h3 style={{ fontSize: '18px', color: '#ef4444', marginBottom: '25px', marginTop: '10px', borderBottom: '2px solid rgba(239, 68, 68, 0.1)', paddingBottom: '10px' }}>Location Details</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '20px' }}>
             <div style={{ ...inputGroupStyle, gridColumn: '1 / -1' }}>
               <label style={labelStyle}>Full Address</label>
               <div style={inputContainerStyle}>
@@ -123,7 +129,7 @@ const RegisterSchool = () => {
           </div>
 
           <h3 style={{ fontSize: '18px', color: '#ef4444', marginBottom: '25px', marginTop: '10px', borderBottom: '2px solid rgba(239, 68, 68, 0.1)', paddingBottom: '10px' }}>Account Settings</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '20px' }}>
             <div style={inputGroupStyle}>
               <label style={labelStyle}>Official Email (Login ID)</label>
               <div style={inputContainerStyle}>
@@ -141,7 +147,7 @@ const RegisterSchool = () => {
             </div>
           </div>
 
-          <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap-reverse', gap: '20px' }}>
             <p style={{ margin: 0, color: 'var(--text-light)', fontSize: '14px' }}>
               Already registered? <Link to="/login" style={{ color: '#ef4444', fontWeight: 'bold', textDecoration: 'none' }}>Login here</Link>
             </p>

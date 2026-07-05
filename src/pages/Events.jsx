@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Calendar, MapPin, Trophy, Users, Clock, CheckCircle, AlertCircle, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Swal from 'sweetalert2';
 
 const Events = () => {
   const { user, role, profile } = useAuth();
@@ -115,13 +116,13 @@ const Events = () => {
     }
     
     if (role !== 'student') {
-      alert("Only Student accounts can register for competitions. Please login with a student account.");
+      Swal.fire({ title: 'Access Denied', text: "Only Student accounts can register for competitions. Please login with a student account.", icon: 'error' });
       return;
     }
 
     // --- RESTRICTION 1: Profile Completion ---
     if (!profile.address) {
-       alert("Registration Blocked: Please complete your profile (add your Address) by contacting your school or admin before registering for official events.");
+       Swal.fire({ title: 'Registration Blocked', text: "Please complete your profile (add your Address) by contacting your school or admin before registering for official events.", icon: 'warning' });
        return;
     }
 
@@ -135,11 +136,11 @@ const Events = () => {
       else if (ev.age_category === 'U-18') maxAge = 18;
 
       if (age > maxAge && ev.age_category !== 'Open') {
-        alert(`Age Restriction: You are ${age} years old. This event is strictly for the ${ev.age_category} category. You are not eligible to participate.`);
+        Swal.fire({ title: 'Age Restriction', text: `You are ${age} years old. This event is strictly for the ${ev.age_category} category. You are not eligible to participate.`, icon: 'error' });
         return;
       }
     } else {
-      alert("Registration Blocked: Your Date of Birth is missing from your profile. Please ask your school or admin to update your DOB to verify eligibility.");
+      Swal.fire({ title: 'Registration Blocked', text: "Your Date of Birth is missing from your profile. Please ask your school or admin to update your DOB to verify eligibility.", icon: 'warning' });
       return;
     }
 
@@ -160,17 +161,17 @@ const Events = () => {
       const currentPoints = studentData?.points || 0;
       await supabase.from('students').update({ points: currentPoints + 500 }).eq('id', profile.id);
       
-      alert("Successfully Registered for the Event! 🎉 You earned 500 Global Points!");
+      Swal.fire({ title: 'Success!', text: "Successfully Registered for the Event! 🎉 You earned 500 Global Points!", icon: 'success' });
       setMyRegistrations([...myRegistrations, ev.id]);
     } catch (err) {
-      alert(err.message || "An error occurred while registering.");
+      Swal.fire({ title: 'Error', text: err.message || "An error occurred while registering.", icon: 'error' });
     } finally {
       setRegisteringId(null);
     }
   };
 
   return (
-    <main style={{ backgroundColor: '#f8fafc', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'var(--font-body)' }}>
+    <main style={{ backgroundColor: '#f8fafc', minHeight: '100vh', paddingTop: '100px', paddingBottom: '80px', fontFamily: 'var(--font-body)' }}>
       
       {/* Login Popup Modal */}
       <AnimatePresence>
@@ -270,7 +271,7 @@ const Events = () => {
               <p style={{ color: '#64748b', maxWidth: '400px', margin: '0 auto' }}>There are currently no active competitions published in the database. Please check back later!</p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '30px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 350px), 1fr))', gap: '30px' }}>
               {events.map((ev, index) => {
                 const regOpen = isRegistrationOpen(ev.reg_start_date, ev.reg_end_date);
                 const isFinished = isEventFinished(ev.event_date);
@@ -424,7 +425,7 @@ const Events = () => {
                     <p style={{ color: '#64748b' }}>The event administrators have not uploaded the final scores for this competition.</p>
                   </div>
                 ) : (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+                  <div style={{ overflowX: 'auto', width: '100%' }}><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
                     <thead>
                       <tr style={{ backgroundColor: '#f1f5f9', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' }}>
                         <th style={{ padding: '15px 20px', borderBottom: '1px solid #e2e8f0', width: '80px' }}>Rank</th>
@@ -452,7 +453,7 @@ const Events = () => {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </table></div>
                 )}
               </div>
             </motion.div>

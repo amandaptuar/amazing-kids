@@ -5,6 +5,7 @@ import { User, MapPin, Phone, Mail, Lock, Calendar, School, Gamepad2, ArrowRight
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import * as india from '../lib/indiaData';
+import Swal from 'sweetalert2';
 
 const RegisterStudent = () => {
   const [formData, setFormData] = useState({
@@ -33,7 +34,12 @@ const RegisterStudent = () => {
       await registerStudent(formData);
       window.location.href = '/dashboard/student';
     } catch (error) {
-      alert(error.message);
+      Swal.fire({
+        title: 'Registration Failed',
+        text: error.message,
+        icon: 'error',
+        confirmButtonColor: '#3b82f6'
+      });
     } finally {
       setLoading(false);
     }
@@ -65,7 +71,7 @@ const RegisterStudent = () => {
         <form onSubmit={handleSubmit} style={{ padding: '40px' }}>
           
           <h3 style={{ fontSize: '18px', color: 'var(--primary-dark)', marginBottom: '25px', borderBottom: '2px solid var(--primary-light)', paddingBottom: '10px' }}>Personal Details</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '20px' }}>
             <div style={inputGroupStyle}>
               <label style={labelStyle}>Full Name</label>
               <div style={inputContainerStyle}>
@@ -74,7 +80,7 @@ const RegisterStudent = () => {
               </div>
             </div>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div className="mobile-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '20px' }}>
               <div style={inputGroupStyle}>
                 <label style={labelStyle}>Date of Birth</label>
                 <div style={inputContainerStyle}>
@@ -101,7 +107,7 @@ const RegisterStudent = () => {
           </div>
 
           <h3 style={{ fontSize: '18px', color: 'var(--primary-dark)', marginBottom: '25px', marginTop: '10px', borderBottom: '2px solid var(--primary-light)', paddingBottom: '10px' }}>Location Details</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '20px' }}>
             <div style={{ ...inputGroupStyle, gridColumn: '1 / -1' }}>
               <label style={labelStyle}>Full Address</label>
               <div style={inputContainerStyle}>
@@ -174,7 +180,7 @@ const RegisterStudent = () => {
           </div>
 
           <h3 style={{ fontSize: '18px', color: 'var(--primary-dark)', marginBottom: '25px', marginTop: '10px', borderBottom: '2px solid var(--primary-light)', paddingBottom: '10px' }}>Account Settings</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '20px' }}>
             <div style={inputGroupStyle}>
               <label style={labelStyle}>Email Address (Login ID)</label>
               <div style={inputContainerStyle}>
@@ -192,7 +198,7 @@ const RegisterStudent = () => {
             </div>
           </div>
 
-          <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
             <p style={{ margin: 0, color: 'var(--text-light)', fontSize: '14px' }}>
               Already registered? <Link to="/login" style={{ color: 'var(--primary-blue)', fontWeight: 'bold', textDecoration: 'none' }}>Login here</Link>
             </p>

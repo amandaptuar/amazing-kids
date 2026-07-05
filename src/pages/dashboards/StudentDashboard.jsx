@@ -4,6 +4,7 @@ import { Navigate, Link } from 'react-router-dom';
 import { Trophy, Medal, Star, Target, MapPin, Calendar, Activity, ArrowRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
+import Swal from 'sweetalert2';
 
 const StudentDashboard = () => {
   const { role, profile, loading } = useAuth();
@@ -25,11 +26,26 @@ const StudentDashboard = () => {
 
   const handleRedeem = async (goodie) => {
     if (points < goodie.cost) {
-      alert(`Insufficient points! You need ${goodie.cost - points} more points to redeem the ${goodie.name}. Play arcade games or win tournaments to earn more!`);
+      Swal.fire({
+        title: 'Insufficient Points',
+        text: `You need ${goodie.cost - points} more points to redeem the ${goodie.name}. Play arcade games or win tournaments to earn more!`,
+        icon: 'warning',
+        confirmButtonColor: '#3b82f6'
+      });
       return;
     }
     
-    if (window.confirm(`Are you sure you want to spend ${goodie.cost} points on ${goodie.name}?`)) {
+    const result = await Swal.fire({
+      title: 'Confirm Redemption',
+      text: `Are you sure you want to spend ${goodie.cost} points on ${goodie.name}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#ef4444',
+      confirmButtonText: 'Yes, redeem it!'
+    });
+
+    if (result.isConfirmed) {
       setRedeemingId(goodie.id);
       try {
         const newPoints = points - goodie.cost;
@@ -38,9 +54,19 @@ const StudentDashboard = () => {
         if (error) throw error;
         
         setPoints(newPoints);
-        alert(`🎉 Success! You have successfully redeemed the ${goodie.name}. It will be shipped to your registered address or school.`);
+        Swal.fire({
+          title: 'Success!',
+          text: `You have successfully redeemed the ${goodie.name}. It will be shipped to your registered address or school.`,
+          icon: 'success',
+          confirmButtonColor: '#10b981'
+        });
       } catch (error) {
-        alert("An error occurred while redeeming. Please try again later.");
+        Swal.fire({
+          title: 'Error',
+          text: 'An error occurred while redeeming. Please try again later.',
+          icon: 'error',
+          confirmButtonColor: '#ef4444'
+        });
       } finally {
         setRedeemingId(null);
       }
@@ -236,7 +262,7 @@ const StudentDashboard = () => {
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '700px' }}>
+              <div style={{ overflowX: 'auto', width: '100%' }}><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '700px' }}>
                 <thead>
                   <tr style={{ backgroundColor: 'white', color: '#94a3b8', fontSize: '12px', textTransform: 'uppercase' }}>
                     <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Competition Details</th>
@@ -295,7 +321,7 @@ const StudentDashboard = () => {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             </div>
           )}
         </div>

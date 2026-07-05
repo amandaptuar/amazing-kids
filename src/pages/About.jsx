@@ -16,7 +16,7 @@ const About = () => {
         <div className="container">
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', 
             gap: '60px',
             alignItems: 'center' 
           }}>
@@ -173,7 +173,7 @@ const About = () => {
 
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', 
             gap: '30px' 
           }}>
             {[
