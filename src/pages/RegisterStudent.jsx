@@ -10,7 +10,8 @@ import Swal from 'sweetalert2';
 const RegisterStudent = () => {
   const [formData, setFormData] = useState({
     fullName: '', email: '', password: '', dob: '', gender: 'Male',
-    parentName: '', state: '', district: '', address: '', schoolId: '', games: []
+    parentName: '', state: '', district: '', address: '', schoolId: '', games: [],
+    board: 'Zila Parishad School'
   });
   const [loading, setLoading] = useState(false);
   const [schools, setSchools] = useState([]);
@@ -161,7 +162,29 @@ const RegisterStudent = () => {
           </div>
 
           <h3 style={{ fontSize: '18px', color: 'var(--primary-dark)', marginBottom: '25px', marginTop: '10px', borderBottom: '2px solid var(--primary-light)', paddingBottom: '10px' }}>School & Programs</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '20px' }}>
+            
+            <div style={inputGroupStyle}>
+              <label style={labelStyle}>Education Board</label>
+              <div style={inputContainerStyle}>
+                <School size={18} style={iconStyle} />
+                <select 
+                  value={formData.board} 
+                  onChange={e => setFormData({...formData, board: e.target.value})} 
+                  style={{...inputStyle, paddingLeft: '45px', appearance: 'auto'}}
+                >
+                  <option value="Zila Parishad School">Zila Parishad School</option>
+                  <option value="Municipal Corporation School">Municipal Corporation School</option>
+                  <option value="State Board">State Board</option>
+                  <option value="CBSE">CBSE</option>
+                  <option value="ICSE">ICSE</option>
+                  <option value="CAIE">CAIE</option>
+                  <option value="IB">IB</option>
+                  <option value="NIOS">NIOS</option>
+                </select>
+              </div>
+            </div>
+
             <div style={inputGroupStyle}>
               <label style={labelStyle}>Select Your School</label>
               <div style={inputContainerStyle}>
