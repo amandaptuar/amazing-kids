@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { CalendarDays, ArrowRight } from 'lucide-react';
 
 const LatestNews = () => {
   const newsItems = [
@@ -57,23 +58,25 @@ const LatestNews = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: index * 0.15 }}
-              whileHover={{ y: -12 }}
+              whileHover={{ y: -12, boxShadow: '0 25px 50px rgba(0,0,0,0.12)' }}
               style={{ 
                 backgroundColor: 'var(--white)', 
-                borderRadius: '16px', 
+                borderRadius: '20px', 
                 overflow: 'hidden',
                 boxShadow: '0 10px 30px rgba(0,0,0,0.06)',
                 display: 'flex',
                 flexDirection: 'column',
-                transition: 'all 0.3s ease'
+                transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                border: '1px solid rgba(0,0,0,0.03)'
               }}
             >
               {/* Image Container */}
               <div style={{ height: '240px', overflow: 'hidden', position: 'relative' }}>
                 <img 
                   src={news.image} 
-                  alt={news.title} 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }} 
+                  alt={news.title}
+                  loading="lazy"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.6s ease' }} 
                   onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.08)'}
                   onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 />
@@ -81,15 +84,17 @@ const LatestNews = () => {
                   position: 'absolute', 
                   top: '20px', 
                   left: '20px', 
-                  backgroundColor: 'var(--primary-light)',
-                  color: 'var(--text-dark)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  backdropFilter: 'blur(8px)',
+                  color: 'var(--primary-dark)',
                   padding: '6px 14px',
                   borderRadius: '20px',
                   fontSize: '12px',
-                  fontWeight: '600',
+                  fontWeight: '700',
                   letterSpacing: '1px',
                   textTransform: 'uppercase',
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                  border: '1px solid rgba(255,255,255,0.5)'
                 }}>
                   {news.category}
                 </div>
@@ -97,8 +102,8 @@ const LatestNews = () => {
 
               {/* Content Container */}
               <div style={{ padding: '30px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <div style={{ fontSize: '13px', color: 'var(--text-light)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span>📅</span> {news.date}
+                <div style={{ fontSize: '13px', color: 'var(--text-light)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
+                  <CalendarDays size={14} style={{ color: 'var(--accent-orange)' }} /> {news.date}
                 </div>
                 
                 <h3 style={{ 
@@ -106,7 +111,8 @@ const LatestNews = () => {
                   margin: '0 0 15px', 
                   fontFamily: 'var(--font-heading)', 
                   color: 'var(--text-dark)',
-                  lineHeight: '1.4'
+                  lineHeight: '1.4',
+                  fontWeight: '700'
                 }}>
                   {news.title}
                 </h3>
@@ -125,19 +131,26 @@ const LatestNews = () => {
                   <button style={{ 
                     background: 'none', 
                     border: 'none', 
-                    color: 'var(--text-dark)', 
+                    color: 'var(--primary-dark)', 
                     fontWeight: '700', 
                     cursor: 'pointer', 
                     fontSize: '14px',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '8px',
-                    padding: 0
+                    padding: 0,
+                    transition: 'gap 0.3s ease, color 0.3s ease'
                   }}
-                  onMouseOver={(e) => e.currentTarget.style.opacity = '0.7'}
-                  onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.gap = '12px';
+                    e.currentTarget.style.color = 'var(--accent-orange)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.gap = '8px';
+                    e.currentTarget.style.color = 'var(--primary-dark)';
+                  }}
                   >
-                    READ FULL STORY <span style={{ fontSize: '18px' }}>→</span>
+                    READ FULL STORY <ArrowRight size={18} />
                   </button>
                 </div>
               </div>

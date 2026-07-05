@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Play } from 'lucide-react';
 
 const Games = () => {
   const games = [
@@ -7,7 +8,7 @@ const Games = () => {
       id: 1,
       title: 'Athletic',
       info: 'Track events, sprints, and physical challenges designed to test agility, speed, and endurance.',
-      image: 'https://images.unsplash.com/photo-1552674605-15c2145eba11?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
+      image: '/kid_athlete.png'
     },
     {
       id: 2,
@@ -31,7 +32,7 @@ const Games = () => {
       id: 5,
       title: 'Skater',
       info: 'Thrilling speed skating competitions featuring both quad and inline roller skating categories.',
-      image: 'https://images.unsplash.com/photo-1565261596796-0158ea9c8f00?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
+      image: '/kid_skater.png'
     },
     {
       id: 6,
@@ -85,26 +86,30 @@ const Games = () => {
             <motion.div 
               key={game.id} 
               variants={itemVariants}
-              whileHover={{ y: -10, boxShadow: '0 15px 35px rgba(0,0,0,0.1)' }}
+              whileHover={{ y: -12, boxShadow: '0 25px 50px rgba(0,0,0,0.12)' }}
               style={{
                 backgroundColor: 'var(--bg-light)',
-                borderRadius: '12px',
+                borderRadius: '16px',
                 overflow: 'hidden',
-                boxShadow: '0 5px 15px rgba(0,0,0,0.05)',
-                transition: 'all 0.3s ease',
-                position: 'relative'
+                boxShadow: '0 10px 30px rgba(0,0,0,0.06)',
+                transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                position: 'relative',
+                border: '1px solid rgba(0,0,0,0.03)'
               }}
             >
-              <div style={{ height: '200px', overflow: 'hidden', position: 'relative' }}>
+              <div style={{ height: '220px', overflow: 'hidden', position: 'relative' }}>
                 <img 
                   src={game.image} 
                   alt={game.title} 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  loading="lazy"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.6s ease' }} 
+                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.08)'}
+                  onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 />
                 <div style={{
                   position: 'absolute',
                   top: 0, left: 0, right: 0, bottom: 0,
-                  background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)'
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)'
                 }} />
                 <h3 style={{ 
                   position: 'absolute',
@@ -116,14 +121,27 @@ const Games = () => {
                   fontFamily: 'var(--font-heading)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px'
+                  gap: '10px',
+                  fontWeight: '700'
                 }}>
-                  <span style={{ color: 'var(--primary-light)', fontSize: '18px' }}>▶</span> {game.title}
+                  <div style={{ 
+                    backgroundColor: 'var(--primary-blue)', 
+                    width: '32px', 
+                    height: '32px', 
+                    borderRadius: '50%', 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                  }}>
+                    <Play size={16} color="white" fill="white" />
+                  </div>
+                  {game.title}
                 </h3>
               </div>
               
-              <div style={{ padding: '25px' }}>
-                <p style={{ fontSize: '15px', color: 'var(--text-dark)', lineHeight: '1.6', margin: 0 }}>
+              <div style={{ padding: '25px', backgroundColor: 'var(--white)' }}>
+                <p style={{ fontSize: '15px', color: 'var(--text-light)', lineHeight: '1.7', margin: 0 }}>
                   {game.info}
                 </p>
               </div>

@@ -1,25 +1,26 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Trophy, Sprout, Award, MapPin } from 'lucide-react';
 
 const Features = () => {
   const features = [
     {
-      icon: '🏆',
+      icon: <Trophy size={48} color="var(--primary-blue)" />,
       title: "India's 1st Ranking Event",
       description: 'The first-ever dedicated ranking competition platform exclusively for young talents aged 3 to 12 years in India.'
     },
     {
-      icon: '🌱',
+      icon: <Sprout size={48} color="var(--primary-blue)" />,
       title: 'Grassroot Development',
       description: 'Focused on identifying and nurturing talent early, preparing perfect athletes and artists for the nation.'
     },
     {
-      icon: '🏅',
+      icon: <Award size={48} color="var(--primary-blue)" />,
       title: 'National Recognition',
       description: 'Every participant gets a platform to showcase their skills, earn a national rank, and get recognized for their hard work.'
     },
     {
-      icon: '🏟️',
+      icon: <MapPin size={48} color="var(--primary-blue)" />,
       title: 'Professional Venues',
       description: 'Competitions held on professional synthetic tracks, courts, and stages ensuring a safe and premium experience.'
     }

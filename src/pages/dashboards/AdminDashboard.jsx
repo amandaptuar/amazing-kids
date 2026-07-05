@@ -37,6 +37,13 @@ const AdminDashboard = () => {
   const [studentPerformances, setStudentPerformances] = useState([]);
   const [loadingStudent, setLoadingStudent] = useState(false);
 
+  // School Overview State
+  const [selectedSchool, setSelectedSchool] = useState(null);
+  const [schoolStudents, setSchoolStudents] = useState([]);
+  const [loadingSchool, setLoadingSchool] = useState(false);
+
+  const today = new Date().toISOString().split('T')[0];
+
   useEffect(() => {
     if (role === 'admin') {
       fetchDashboardData();
@@ -99,8 +106,43 @@ const AdminDashboard = () => {
     setLoadingStudent(false);
   };
 
+  const handleViewSchool = async (school) => {
+    setSelectedSchool(school);
+    setLoadingSchool(true);
+    
+    const { data: studentsData } = await supabase
+      .from('students')
+      .select('*')
+      .eq('school_id', school.id)
+      .order('points', { ascending: false });
+      
+    if (studentsData) {
+      setSchoolStudents(studentsData);
+    }
+    setLoadingSchool(false);
+  };
+
   const handleCreateEvent = async (e) => {
     e.preventDefault();
+    
+    // Explicit Validation
+    if (eventData.date < today) {
+      alert("Event date cannot be in the past.");
+      return;
+    }
+    if (eventData.reg_start < today) {
+      alert("Registration start date cannot be in the past.");
+      return;
+    }
+    if (eventData.reg_end < eventData.reg_start) {
+      alert("Registration end date cannot be before registration start date.");
+      return;
+    }
+    if (eventData.reg_end >= eventData.date) {
+      alert("Registration must end before the event date.");
+      return;
+    }
+
     setIsCreatingEvent(true);
     try {
       const { error } = await supabase.from('events').insert([{
@@ -505,10 +547,25 @@ const AdminDashboard = () => {
                       </thead>
                       <tbody>
                         {schools.map(s => (
-                          <tr key={s.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                            <td style={{ padding: '20px 30px', fontWeight: 'bold' }}>{s.school_name}</td>
+                          <tr key={s.id} onClick={() => handleViewSchool(s)} style={{ borderBottom: '1px solid #e2e8f0', cursor: 'pointer', transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                            <td style={{ padding: '20px 30px', fontWeight: 'bold' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#eff6ff', color: '#3b82f6', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold' }}>
+                                  <Building size={20} />
+                                </div>
+                                <div>
+                                  {s.school_name}
+                                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>ID: {s.custom_school_id}</div>
+                                </div>
+                              </div>
+                            </td>
                             <td style={{ padding: '20px 30px' }}>{s.principal_name} <br/><span style={{fontSize:'12px', color:'#94a3b8'}}>{s.email}</span></td>
-                            <td style={{ padding: '20px 30px', color: '#64748b' }}>{s.district}, {s.state}</td>
+                            <td style={{ padding: '20px 30px', color: '#64748b' }}>
+                              {s.district}, {s.state}
+                              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-20px' }}>
+                                <ChevronRight size={16} color="#cbd5e1" />
+                              </div>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -569,7 +626,7 @@ const AdminDashboard = () => {
                             </div>
                             <div>
                               <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Competition Date</label>
-                              <input type="date" required value={eventData.date} onChange={e => setEventData({...eventData, date: e.target.value})} style={inputStyle} />
+                              <input type="date" min={today} required value={eventData.date} onChange={e => setEventData({...eventData, date: e.target.value})} style={inputStyle} />
                             </div>
                             <div>
                               <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Age Category</label>
@@ -593,11 +650,11 @@ const AdminDashboard = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                               <div>
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Reg. Start</label>
-                                <input type="date" required value={eventData.reg_start} onChange={e => setEventData({...eventData, reg_start: e.target.value})} style={inputStyle} />
+                                <input type="date" min={today} required value={eventData.reg_start} onChange={e => setEventData({...eventData, reg_start: e.target.value})} style={inputStyle} />
                               </div>
                               <div>
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Reg. End</label>
-                                <input type="date" required value={eventData.reg_end} onChange={e => setEventData({...eventData, reg_end: e.target.value})} style={inputStyle} />
+                                <input type="date" min={eventData.reg_start || today} max={eventData.date || undefined} required value={eventData.reg_end} onChange={e => setEventData({...eventData, reg_end: e.target.value})} style={inputStyle} />
                               </div>
                             </div>
                           </div>
@@ -782,6 +839,96 @@ const AdminDashboard = () => {
                     </table>
                   </div>
                 </div>
+              )}
+
+              {/* SCHOOL OVERVIEW VIEW */}
+              {activeTab === 'schools' && selectedSchool && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ backgroundColor: '#ffffff', borderRadius: '20px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                  
+                  {/* Header */}
+                  <div style={{ padding: '30px', backgroundColor: '#f8fafc', color: '#0f172a', borderBottom: '1px solid #e2e8f0' }}>
+                    <button onClick={() => setSelectedSchool(null)} style={{ background: 'transparent', border: 'none', color: '#64748b', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', marginBottom: '20px', fontSize: '13px', fontWeight: 'bold' }}>
+                      <ArrowLeft size={16} /> Back to Institutions
+                    </button>
+                    
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        <div style={{ width: '80px', height: '80px', borderRadius: '16px', backgroundColor: '#10b981', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '0 10px 25px rgba(16, 185, 129, 0.4)' }}>
+                          <Building size={40} />
+                        </div>
+                        <div>
+                          <h2 style={{ margin: 0, fontFamily: 'var(--font-heading)', fontSize: '28px' }}>{selectedSchool.school_name}</h2>
+                          <div style={{ fontSize: '14px', color: '#64748b', marginTop: '5px', display: 'flex', gap: '15px' }}>
+                            <span style={{ backgroundColor: '#e2e8f0', padding: '4px 10px', borderRadius: '6px', fontWeight: 'bold', color: '#475569' }}>{selectedSchool.custom_school_id}</span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Users size={16} /> {schoolStudents.length} Registered Students</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '15px 25px', borderRadius: '12px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#059669', fontFamily: 'monospace' }}>
+                          {schoolStudents.reduce((sum, s) => sum + (s.points || 0), 0).toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#059669', fontWeight: 'bold' }}>Total School Points</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '30px' }}>
+                    {/* School Info Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginBottom: '40px' }}>
+                      <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <h4 style={{ margin: '0 0 15px 0', fontSize: '14px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '1px' }}>Principal & Contact</h4>
+                        <div style={{ display: 'grid', gap: '10px', fontSize: '14px' }}>
+                          <div><strong style={{ color: '#0f172a' }}>Principal:</strong> {selectedSchool.principal_name}</div>
+                          <div><strong style={{ color: '#0f172a' }}>Email:</strong> {selectedSchool.email}</div>
+                          <div><strong style={{ color: '#0f172a' }}>Phone:</strong> {selectedSchool.phone}</div>
+                        </div>
+                      </div>
+                      <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <h4 style={{ margin: '0 0 15px 0', fontSize: '14px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '1px' }}>Location</h4>
+                        <div style={{ display: 'grid', gap: '10px', fontSize: '14px' }}>
+                          <div><strong style={{ color: '#0f172a' }}>District:</strong> {selectedSchool.district}</div>
+                          <div><strong style={{ color: '#0f172a' }}>State:</strong> {selectedSchool.state}</div>
+                          <div><strong style={{ color: '#0f172a' }}>Registered On:</strong> {new Date(selectedSchool.created_at).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Students List */}
+                    <h3 style={{ fontSize: '18px', color: '#0f172a', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}><Users size={20} color="#10b981" /> Affiliated Students List</h3>
+                    
+                    {loadingSchool ? (
+                      <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading students...</div>
+                    ) : schoolStudents.length === 0 ? (
+                      <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', color: '#64748b' }}>
+                        No students have registered from this school yet.
+                      </div>
+                    ) : (
+                      <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                          <thead>
+                            <tr style={{ backgroundColor: '#f8fafc', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' }}>
+                              <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>Student Name</th>
+                              <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>AK ID</th>
+                              <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>Gender</th>
+                              <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0', textAlign: 'right' }}>Points Earned</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {schoolStudents.map((student, idx) => (
+                              <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                <td style={{ padding: '15px 20px', fontWeight: 'bold', color: '#0f172a' }}>{student.full_name}</td>
+                                <td style={{ padding: '15px 20px', color: '#64748b', fontFamily: 'monospace' }}>{student.custom_student_id}</td>
+                                <td style={{ padding: '15px 20px', color: '#64748b' }}>{student.gender || '-'}</td>
+                                <td style={{ padding: '15px 20px', textAlign: 'right', fontWeight: 'bold', color: '#10b981' }}>{student.points?.toLocaleString() || 0}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
               )}
 
             </motion.div>

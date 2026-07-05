@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, ChevronDown } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { logoutUser } from '../services/authAPI';
@@ -164,6 +164,62 @@ const Header = () => {
           {mobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
         </div>
       </div>
+
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            style={{ overflow: 'hidden', backgroundColor: 'rgba(255, 255, 255, 0.98)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}
+          >
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              {navLinks.map((link, index) => (
+                <div key={index}>
+                  <Link 
+                    to={link.href} 
+                    onClick={() => { if (!link.hasDropdown) setMobileMenuOpen(false); }}
+                    style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--text-dark)', display: 'block', padding: '10px 0', borderBottom: '1px solid #f1f5f9', textDecoration: 'none' }}
+                  >
+                    {link.name}
+                  </Link>
+                  {link.hasDropdown && (
+                    <div style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+                      {link.dropdownItems.map((item, idx) => (
+                        <Link 
+                          key={idx} 
+                          to={item.path}
+                          onClick={() => setMobileMenuOpen(false)}
+                          style={{ fontSize: '14px', color: '#64748b', textDecoration: 'none', display: 'block', padding: '5px 0' }}
+                        >
+                          {item.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              
+              <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {user ? (
+                  <>
+                    <Link to={role === 'admin' ? '/admin' : `/dashboard/${role}`} onClick={() => setMobileMenuOpen(false)} className="btn" style={{ textAlign: 'center', width: '100%', textDecoration: 'none' }}>Profile</Link>
+                    <button onClick={() => { handleLogout(); setMobileMenuOpen(false); }} className="btn" style={{ backgroundColor: '#e2e8f0', color: 'var(--text-dark)', width: '100%' }}>Logout</button>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="btn" style={{ backgroundColor: '#10b981', textAlign: 'center', width: '100%', textDecoration: 'none' }}>Login</Link>
+                    <Link to="/register/student" onClick={() => setMobileMenuOpen(false)} className="btn" style={{ backgroundColor: '#3b82f6', textAlign: 'center', width: '100%', textDecoration: 'none' }}>Register Student</Link>
+                    <Link to="/register/school" onClick={() => setMobileMenuOpen(false)} className="btn" style={{ backgroundColor: '#ef4444', textAlign: 'center', width: '100%', textDecoration: 'none' }}>Register School</Link>
+                  </>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <style>{`
         @media (max-width: 992px) {
           .desktop-nav { display: none !important; }

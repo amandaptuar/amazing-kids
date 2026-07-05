@@ -13,7 +13,7 @@ const Hero = () => {
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       backgroundAttachment: 'fixed',
-      padding: '0'
+      marginTop: '90px'
     }}>
       {/* Empty hero section to display the background image prominently */}
     </section>

@@ -14,10 +14,19 @@
   --font-body: 'Inter', sans-serif;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+::selection {
+  background-color: var(--accent-orange);
+  color: var(--white);
 }
 
 body {
@@ -25,6 +34,8 @@ body {
   color: var(--text-dark);
   background-color: var(--white);
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -36,6 +47,7 @@ h1, h2, h3, h4, h5, h6 {
 a {
   text-decoration: none;
   color: inherit;
+  transition: color 0.3s ease;
 }
 
 ul {
@@ -52,19 +64,22 @@ ul {
   display: inline-block;
   background-color: var(--accent-orange);
   color: var(--white);
-  padding: 12px 24px;
+  padding: 12px 28px;
   font-family: var(--font-heading);
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
   border: none;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   font-size: 14px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(30, 136, 229, 0.2);
 }
 
 .btn:hover {
-  background-color: #e64a19;
-  transform: translateY(-2px);
+  background-color: var(--primary-dark);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(30, 136, 229, 0.4);
 }
 
 .section-title {
@@ -86,4 +101,30 @@ ul {
 
 section {
   padding: 80px 0;
+}
+
+/* GLOBAL MOBILE RESPONSIVENESS OVERRIDES */
+@media (max-width: 768px) {
+  /* Fix hardcoded inline grids crushing content on mobile */
+  div[style*="grid-template-columns: 1fr 1fr"],
+  div[style*="gridTemplateColumns: 1fr 1fr"],
+  div[style*="grid-template-columns: repeat(3, 1fr)"],
+  div[style*="grid-template-columns: repeat(4, 1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Ensure containers don't overflow the screen */
+  .container {
+    padding: 0 15px !important;
+  }
+  
+  /* Fix typography for mobile readability */
+  h1 { font-size: 32px !important; }
+  h2 { font-size: 24px !important; }
+  .section-title { font-size: 28px !important; }
+  
+  /* Prevent horizontal scrolling on mobile */
+  body {
+    overflow-x: hidden;
+  }
 }
