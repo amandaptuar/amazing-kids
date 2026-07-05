@@ -6,8 +6,48 @@ import { supabase } from '../../lib/supabase';
 
 const SchoolDashboard = () => {
   const { role, profile, loading } = useAuth();
+  const [myStudents, setMyStudents] = useState([]);
+  const [eventsParticipated, setEventsParticipated] = useState(0);
+  const [dataLoading, setDataLoading] = useState(true);
 
-  if (loading) return <div style={{ paddingTop: '100px', textAlign: 'center' }}>Loading...</div>;
+  useEffect(() => {
+    const fetchSchoolData = async () => {
+      if (role === 'school' && profile?.id) {
+        try {
+          // 1. Fetch Students
+          const { data: studentsData, error: studentError } = await supabase
+            .from('students')
+            .select('id, full_name, dob, gender, points, email')
+            .eq('school_id', profile.id)
+            .order('points', { ascending: false });
+
+          if (studentError) throw studentError;
+          setMyStudents(studentsData || []);
+
+          // 2. Fetch Events count if there are students
+          if (studentsData && studentsData.length > 0) {
+            const studentIds = studentsData.map(s => s.id);
+            const { count, error: countError } = await supabase
+              .from('event_participants')
+              .select('*', { count: 'exact', head: true })
+              .in('student_id', studentIds);
+              
+            if (!countError && count) {
+              setEventsParticipated(count);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching school dashboard data:", error);
+        } finally {
+          setDataLoading(false);
+        }
+      }
+    };
+    
+    fetchSchoolData();
+  }, [role, profile]);
+
+  if (loading) return <div style={{ paddingTop: '100px', textAlign: 'center', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><div className="loader"></div></div>;
   if (role !== 'school' || !profile) {
     return (
       <div style={{ paddingTop: '120px', textAlign: 'center', minHeight: '100vh', backgroundColor: 'var(--bg-light)' }}>
@@ -36,7 +76,7 @@ const SchoolDashboard = () => {
           <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <p style={{ margin: '0 0 5px 0', color: 'var(--text-light)', fontSize: '14px', textTransform: 'uppercase', fontWeight: 'bold' }}>Registered Students</p>
-              <h3 style={{ margin: 0, fontSize: '28px', color: 'var(--text-dark)' }}>0</h3>
+              <h3 style={{ margin: 0, fontSize: '28px', color: 'var(--text-dark)' }}>{dataLoading ? '...' : myStudents.length}</h3>
             </div>
             <div style={{ backgroundColor: 'var(--bg-light)', padding: '15px', borderRadius: '12px' }}>
               <Users size={24} style={{ color: '#ef4444' }}/>
@@ -46,7 +86,7 @@ const SchoolDashboard = () => {
           <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <p style={{ margin: '0 0 5px 0', color: 'var(--text-light)', fontSize: '14px', textTransform: 'uppercase', fontWeight: 'bold' }}>Events Participated</p>
-              <h3 style={{ margin: 0, fontSize: '28px', color: 'var(--text-dark)' }}>0</h3>
+              <h3 style={{ margin: 0, fontSize: '28px', color: 'var(--text-dark)' }}>{dataLoading ? '...' : eventsParticipated}</h3>
             </div>
             <div style={{ backgroundColor: 'var(--bg-light)', padding: '15px', borderRadius: '12px' }}>
               <Activity size={24} style={{ color: '#ef4444' }}/>
@@ -59,7 +99,35 @@ const SchoolDashboard = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: '15px' }}>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '20px', margin: 0 }}>Your Students</h2>
           </div>
-          <p style={{ color: 'var(--text-light)', fontSize: '14px' }}>No students have registered under your school yet. Once they register, their profiles and event rankings will appear here automatically.</p>
+          
+          {dataLoading ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading students...</div>
+          ) : myStudents.length === 0 ? (
+            <p style={{ color: 'var(--text-light)', fontSize: '14px' }}>No students have registered under your school yet. Once they register, their profiles and event rankings will appear here automatically.</p>
+          ) : (
+            <div style={{ overflowX: 'auto', width: '100%' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '700px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f8fafc', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>Student Name</th>
+                    <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>Gender</th>
+                    <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>Date of Birth</th>
+                    <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>Global Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {myStudents.map((student, idx) => (
+                    <tr key={student.id} style={{ backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: '15px 20px', fontWeight: '500', color: '#0f172a' }}>{student.full_name}</td>
+                      <td style={{ padding: '15px 20px', color: '#475569' }}>{student.gender}</td>
+                      <td style={{ padding: '15px 20px', color: '#475569' }}>{student.dob || 'Not Provided'}</td>
+                      <td style={{ padding: '15px 20px', fontWeight: 'bold', color: 'var(--accent-orange)' }}>{student.points || 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
       </div>
