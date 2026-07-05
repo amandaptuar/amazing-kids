@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Navigate } from 'react-router-dom';
-import { Users, Building, Calendar, Trophy, Activity, ArrowUpRight } from 'lucide-react';
+import { Users, Building, Calendar, Trophy, Activity, ArrowUpRight, Eye } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import Swal from 'sweetalert2';
 
 const SchoolDashboard = () => {
   const { role, profile, loading } = useAuth();
@@ -17,7 +18,7 @@ const SchoolDashboard = () => {
           // 1. Fetch Students
           const { data: studentsData, error: studentError } = await supabase
             .from('students')
-            .select('id, full_name, dob, gender, points, email')
+            .select('id, full_name, dob, gender, points, email, parent_name, address, state, district, games_interested')
             .eq('school_id', profile.id)
             .order('points', { ascending: false });
 
@@ -46,6 +47,30 @@ const SchoolDashboard = () => {
     
     fetchSchoolData();
   }, [role, profile]);
+
+  const handleViewProfile = (student) => {
+    Swal.fire({
+      title: `<h3 style="margin:0; color:var(--primary-dark); font-family:var(--font-heading)">${student.full_name}</h3>`,
+      html: `
+        <div style="text-align: left; padding: 10px;">
+          <p><strong>Email:</strong> ${student.email || 'N/A'}</p>
+          <p><strong>Parent/Guardian:</strong> ${student.parent_name || 'N/A'}</p>
+          <p><strong>Date of Birth:</strong> ${student.dob || 'N/A'}</p>
+          <p><strong>Gender:</strong> ${student.gender || 'N/A'}</p>
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 15px 0;">
+          <p><strong>Location:</strong> ${student.address || 'N/A'}</p>
+          <p><strong>State & District:</strong> ${student.state || 'N/A'}, ${student.district || 'N/A'}</p>
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 15px 0;">
+          <p><strong>Global Points:</strong> <span style="color:var(--accent-orange); font-weight:bold">${student.points || 0}</span></p>
+          <p><strong>Interests:</strong> ${student.games_interested ? student.games_interested.join(', ') : 'None specified'}</p>
+        </div>
+      `,
+      confirmButtonText: 'Close Profile',
+      confirmButtonColor: '#3b82f6',
+      width: '500px',
+      padding: '20px'
+    });
+  };
 
   if (loading) return <div style={{ paddingTop: '100px', textAlign: 'center', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><div className="loader"></div></div>;
   if (role !== 'school' || !profile) {
@@ -113,6 +138,7 @@ const SchoolDashboard = () => {
                     <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>Gender</th>
                     <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>Date of Birth</th>
                     <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0' }}>Global Points</th>
+                    <th style={{ padding: '15px 20px', borderBottom: '2px solid #e2e8f0', textAlign: 'center' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -122,6 +148,14 @@ const SchoolDashboard = () => {
                       <td style={{ padding: '15px 20px', color: '#475569' }}>{student.gender}</td>
                       <td style={{ padding: '15px 20px', color: '#475569' }}>{student.dob || 'Not Provided'}</td>
                       <td style={{ padding: '15px 20px', fontWeight: 'bold', color: 'var(--accent-orange)' }}>{student.points || 0}</td>
+                      <td style={{ padding: '15px 20px', textAlign: 'center' }}>
+                        <button 
+                          onClick={() => handleViewProfile(student)}
+                          style={{ padding: '6px 12px', backgroundColor: '#eff6ff', color: 'var(--primary-blue)', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                        >
+                          <Eye size={14} /> View
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
