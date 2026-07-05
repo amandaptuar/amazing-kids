@@ -80,21 +80,19 @@ const RegisterStudent = () => {
               </div>
             </div>
             
-            <div className="mobile-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '20px' }}>
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>Date of Birth</label>
-                <div style={inputContainerStyle}>
-                  <Calendar size={18} style={iconStyle} />
-                  <input type="date" required value={formData.dob} onChange={e => setFormData({...formData, dob: e.target.value})} style={inputStyle} />
-                </div>
+            <div style={inputGroupStyle}>
+              <label style={labelStyle}>Date of Birth</label>
+              <div style={inputContainerStyle}>
+                <Calendar size={18} style={iconStyle} />
+                <input type="date" required value={formData.dob} onChange={e => setFormData({...formData, dob: e.target.value})} style={inputStyle} />
               </div>
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>Gender</label>
-                <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} style={{...inputStyle, paddingLeft: '15px'}}>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                </select>
-              </div>
+            </div>
+            <div style={inputGroupStyle}>
+              <label style={labelStyle}>Gender</label>
+              <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} style={{...inputStyle, paddingLeft: '15px'}}>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
             </div>
 
             <div style={inputGroupStyle}>
