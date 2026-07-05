@@ -35,6 +35,7 @@ const AdminDashboard = () => {
   // Student Overview State
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentPerformances, setStudentPerformances] = useState([]);
+  const [studentActiveEvents, setStudentActiveEvents] = useState([]);
   const [loadingStudent, setLoadingStudent] = useState(false);
 
   // School Overview State
@@ -103,6 +104,24 @@ const AdminDashboard = () => {
     if (perfData) {
       setStudentPerformances(perfData);
     }
+
+    const { data: activeData } = await supabase
+      .from('event_participants')
+      .select(`
+        events (
+          name,
+          sport_category,
+          event_date
+        )
+      `)
+      .eq('student_id', student.id);
+
+    if (activeData) {
+      setStudentActiveEvents(activeData);
+    } else {
+      setStudentActiveEvents([]);
+    }
+
     setLoadingStudent(false);
   };
 
@@ -441,9 +460,19 @@ const AdminDashboard = () => {
                           </div>
                         </div>
                       </div>
-                      <div style={{ backgroundColor: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)', padding: '15px 25px', borderRadius: '12px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#b45309', fontFamily: 'monospace' }}>{selectedStudent.points?.toLocaleString()}</div>
-                        <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#b45309', fontWeight: 'bold' }}>Total Points</div>
+                      <div style={{ display: 'flex', gap: '15px' }}>
+                        <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '15px 25px', borderRadius: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#1d4ed8', fontFamily: 'monospace' }}>
+                            {leaderboard.findIndex(s => s.id === selectedStudent.id) !== -1 
+                              ? `#${leaderboard.findIndex(s => s.id === selectedStudent.id) + 1}` 
+                              : 'N/A'}
+                          </div>
+                          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#1d4ed8', fontWeight: 'bold' }}>Global Rank</div>
+                        </div>
+                        <div style={{ backgroundColor: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)', padding: '15px 25px', borderRadius: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#b45309', fontFamily: 'monospace' }}>{selectedStudent.points?.toLocaleString() || 0}</div>
+                          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#b45309', fontWeight: 'bold' }}>Total Points</div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -484,7 +513,19 @@ const AdminDashboard = () => {
                       <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading performances...</div>
                     ) : studentPerformances.length === 0 ? (
                       <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', color: '#64748b' }}>
-                        This student hasn't recorded any competition performances yet.
+                        <div style={{ marginBottom: '15px' }}>This student hasn't recorded any competition performances yet.</div>
+                        {studentActiveEvents.length > 0 && (
+                          <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'inline-block', textAlign: 'left' }}>
+                            <h4 style={{ margin: '0 0 10px 0', color: '#0f172a', fontSize: '14px' }}>Currently Registered For:</h4>
+                            <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                              {studentActiveEvents.map((act, i) => (
+                                <li key={i} style={{ fontSize: '13px', color: '#64748b', marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ color: '#3b82f6' }}>•</span> {act.events?.name} ({new Date(act.events?.event_date).toLocaleDateString()})
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div style={{ overflowX: 'auto' }}>
