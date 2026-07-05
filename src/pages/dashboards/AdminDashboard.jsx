@@ -456,7 +456,7 @@ const AdminDashboard = () => {
                           <div style={{ fontSize: '14px', color: '#64748b', marginTop: '5px', display: 'flex', gap: '15px' }}>
                             <span><strong>ID:</strong> {selectedStudent.custom_student_id}</span>
                             <span><strong>Gender:</strong> {selectedStudent.gender}</span>
-                            <span><strong>DOB:</strong> {new Date(selectedStudent.date_of_birth).toLocaleDateString()}</span>
+                            <span><strong>DOB:</strong> {new Date(selectedStudent.dob).toLocaleDateString()}</span>
                           </div>
                         </div>
                       </div>
