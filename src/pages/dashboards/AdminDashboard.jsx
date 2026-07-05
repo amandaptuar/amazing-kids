@@ -520,7 +520,8 @@ const AdminDashboard = () => {
                             <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
                               {studentActiveEvents.map((act, i) => (
                                 <li key={i} style={{ fontSize: '13px', color: '#64748b', marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <span style={{ color: '#3b82f6' }}>•</span> {act.events?.name} ({new Date(act.events?.event_date).toLocaleDateString()})
+                                  <span style={{ color: '#3b82f6' }}>•</span> 
+                                  <strong style={{ color: '#0f172a' }}>{act.events?.sport_category || 'Event'}</strong> - {act.events?.name} ({new Date(act.events?.event_date).toLocaleDateString()})
                                 </li>
                               ))}
                             </ul>
