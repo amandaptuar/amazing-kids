@@ -36,12 +36,9 @@ const Header = () => {
       href: '#', 
       hasDropdown: true,
       dropdownItems: [
-        { name: 'Athletic', path: '/program/athletic' },
-        { name: 'Cycling', path: '/program/cycling' },
-        { name: 'Skating', path: '/program/skating' },
-        { name: 'Dancer', path: '/program/dancer' },
-        { name: 'Artist', path: '/program/artist' },
-        { name: 'Musician', path: '/program/musician' }
+        { name: 'Athlete', path: '/program/athlete' },
+        { name: 'High Jump', path: '/program/highjump' },
+        { name: 'Throw', path: '/program/throw' }
       ]
     },
     { name: 'Events', href: '/events' },

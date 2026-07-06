@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { programsData } from '../data/programsData';
 import { X, Trophy, MapPin, Calendar, Activity, ChevronDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import * as india from '../lib/indiaData';
 
 // Reusable Modal Component
 const ProfileModal = ({ participant, metricName, onClose }) => {
@@ -52,11 +53,15 @@ const ProfileModal = ({ participant, metricName, onClose }) => {
 
           {/* Modal Header */}
           <div style={{ backgroundColor: 'var(--primary-light)', padding: '40px 20px 20px', textAlign: 'center', borderBottom: '4px solid var(--accent-orange)' }}>
-            <div style={{ width: '120px', height: '120px', borderRadius: '50%', backgroundColor: 'var(--primary-blue)', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '40px', fontWeight: 'bold', margin: '0 auto 15px auto', border: '4px solid white', boxShadow: '0 10px 20px rgba(0,0,0,0.1)' }}>
-              {participant.students?.full_name?.charAt(0) || '?'}
+            <div style={{ width: '120px', height: '120px', borderRadius: '50%', backgroundColor: 'var(--primary-blue)', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '40px', fontWeight: 'bold', margin: '0 auto 15px auto', border: '4px solid white', boxShadow: '0 10px 20px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+              {participant.students?.photo_url ? (
+                <img src={participant.students.photo_url} alt={participant.students.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                participant.students?.full_name?.charAt(0) || '?'
+              )}
             </div>
             <h2 style={{ margin: 0, fontSize: '24px', fontFamily: 'var(--font-heading)', color: 'var(--text-dark)' }}>{participant.students?.full_name}</h2>
-            <div style={{ color: 'var(--primary-dark)', fontWeight: 'bold', fontSize: '14px', marginTop: '5px' }}>AIR Rank: #{participant.air_rank}</div>
+            <div style={{ color: 'var(--primary-dark)', fontWeight: 'bold', fontSize: '14px', marginTop: '5px' }}>Category Rank: #{participant.dynamic_rank || participant.air_rank}</div>
           </div>
 
           {/* Modal Details Grid */}
@@ -110,6 +115,10 @@ const Program = () => {
   const [rankings, setRankings] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [loadingRankings, setLoadingRankings] = useState(false);
+  const [genderFilter, setGenderFilter] = useState('All');
+  const [ageGroupFilter, setAgeGroupFilter] = useState('All');
+  const [stateFilter, setStateFilter] = useState('All');
+  const [districtFilter, setDistrictFilter] = useState('All');
   
   const categoryKey = category?.toLowerCase();
   const data = programsData[categoryKey];
@@ -154,6 +163,8 @@ const Program = () => {
         students (
           full_name,
           dob,
+          gender,
+          photo_url,
           state,
           district,
           schools ( school_name )
@@ -174,12 +185,55 @@ const Program = () => {
 
   const { title, heroImage, description, metricName } = data;
   
-  const topPerformers = rankings.slice(0, 3);
+  const filteredRankings = rankings.filter(rank => {
+    let matchGender = true;
+    if (genderFilter !== 'All') {
+       matchGender = rank.students?.gender === genderFilter;
+    }
+    let matchAge = true;
+    if (ageGroupFilter !== 'All') {
+       const dob = new Date(rank.students?.dob);
+       const age = new Date().getFullYear() - dob.getFullYear();
+       if (ageGroupFilter === 'U-10') matchAge = age <= 10;
+       else if (ageGroupFilter === 'U-14') matchAge = age > 10 && age <= 14;
+       else if (ageGroupFilter === 'U-18') matchAge = age > 14 && age <= 18;
+    }
+    
+    let matchState = true;
+    if (stateFilter !== 'All') {
+       matchState = rank.students?.state === stateFilter;
+    }
+    
+    let matchDistrict = true;
+    if (districtFilter !== 'All') {
+       matchDistrict = rank.students?.district === districtFilter;
+    }
+
+    return matchGender && matchAge && matchState && matchDistrict;
+  });
+
+  const allStates = india.getAllStates();
+  const availableDistricts = stateFilter === 'All' 
+    ? [] 
+    : india.getDistrictsByState(stateFilter) || [];
+
+  const handleStateChange = (e) => {
+    setStateFilter(e.target.value);
+    setDistrictFilter('All');
+    setCurrentPage(1);
+  };
+
+  const dynamicRankings = filteredRankings.map((rank, index) => ({
+    ...rank,
+    dynamic_rank: index + 1
+  }));
+
+  const topPerformers = dynamicRankings.slice(0, 3);
   
   // Pagination logic (20 per page)
   const itemsPerPage = 20;
-  const totalPages = Math.ceil(rankings.length / itemsPerPage);
-  const currentParticipants = rankings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(dynamicRankings.length / itemsPerPage);
+  const currentParticipants = dynamicRankings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <main style={{ backgroundColor: 'var(--bg-light)', minHeight: '100vh', paddingBottom: '80px' }}>
@@ -213,7 +267,7 @@ const Program = () => {
       {/* EVENT SELECTOR */}
       <section style={{ padding: '40px 0 0 0', backgroundColor: 'var(--white)' }}>
         <div className="container" style={{ display: 'flex', justifyContent: 'center' }}>
-          <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', width: '100%' }}>
+          <div className="event-selector-container" style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', width: '100%' }}>
             <div style={{ fontWeight: 'bold', color: 'var(--text-dark)', fontSize: '16px' }}>Select Competition:</div>
             
             {loadingEvents ? (
@@ -225,6 +279,7 @@ const Program = () => {
                 <select 
                   value={selectedEventId || ''} 
                   onChange={(e) => setSelectedEventId(e.target.value)}
+                  className="event-selector-select"
                   style={{ appearance: 'none', padding: '12px 40px 12px 20px', fontSize: '15px', fontWeight: 'bold', color: 'var(--primary-blue)', backgroundColor: 'white', border: '2px solid var(--primary-blue)', borderRadius: '8px', cursor: 'pointer', outline: 'none', width: '100%', minWidth: '250px', maxWidth: '350px' }}
                 >
                   {events.map(ev => (
@@ -250,6 +305,8 @@ const Program = () => {
             <div style={{ textAlign: 'center', padding: '50px', color: '#64748b' }}>Generating Live Leaderboard...</div>
           ) : rankings.length === 0 && events.length > 0 ? (
             <div style={{ textAlign: 'center', padding: '50px', color: '#64748b' }}>No scores submitted for this event yet.</div>
+          ) : dynamicRankings.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '50px', color: '#64748b', backgroundColor: 'var(--bg-light)', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>No students listed here matching your selected filters.</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '30px' }}>
               {topPerformers.map((rank, index) => (
@@ -270,13 +327,17 @@ const Program = () => {
                 >
                   <div style={{ backgroundColor: 'var(--primary-dark)', padding: '30px 20px 20px', position: 'relative' }}>
                     {index === 0 && <Trophy size={32} style={{ position: 'absolute', top: '15px', right: '15px', color: '#fbbf24' }} />}
-                    <div style={{ width: '100px', height: '100px', borderRadius: '50%', border: '4px solid white', margin: '0 auto', backgroundColor: 'var(--primary-blue)', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '40px', fontWeight: 'bold' }}>
-                      {rank.students?.full_name?.charAt(0) || '?'}
+                    <div style={{ width: '100px', height: '100px', borderRadius: '50%', border: '4px solid white', margin: '0 auto', backgroundColor: 'var(--primary-blue)', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '40px', fontWeight: 'bold', overflow: 'hidden' }}>
+                      {rank.students?.photo_url ? (
+                        <img src={rank.students.photo_url} alt={rank.students.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        rank.students?.full_name?.charAt(0) || '?'
+                      )}
                     </div>
                   </div>
                   <div style={{ padding: '25px 20px' }}>
                     <h3 style={{ margin: '0 0 5px 0', fontSize: '20px', fontFamily: 'var(--font-heading)', color: 'var(--text-dark)' }}>{rank.students?.full_name}</h3>
-                    <div style={{ color: 'var(--primary-blue)', fontWeight: 'bold', fontSize: '14px', marginBottom: '15px' }}>Rank #{rank.air_rank} • {rank.metric_value}</div>
+                    <div style={{ color: 'var(--primary-blue)', fontWeight: 'bold', fontSize: '14px', marginBottom: '15px' }}>Rank #{rank.dynamic_rank} • {rank.metric_value}</div>
                     
                     <div style={{ backgroundColor: 'white', padding: '15px', borderRadius: '8px', fontSize: '13px', color: 'var(--text-light)', border: '1px solid rgba(0,0,0,0.05)' }}>
                       <div style={{ marginBottom: '5px' }}><strong>School:</strong> {rank.students?.schools?.school_name || 'Independent'}</div>
@@ -296,9 +357,44 @@ const Program = () => {
           <div className="container">
             <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
               
-              <div style={{ padding: '25px 30px', backgroundColor: 'var(--primary-dark)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)', fontSize: '20px' }}>LIVE NATIONAL RANKING LIST</h3>
-                <span style={{ fontSize: '14px', opacity: 0.8 }}>Showing Page {currentPage} of {totalPages}</span>
+              <div className="filter-header-container">
+                <div>
+                  <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)', fontSize: '20px' }}>
+                    LIVE RANKING LIST
+                    {stateFilter !== 'All' && <span style={{fontSize: '14px', fontWeight: 'normal', opacity: 0.8, marginLeft: '10px'}}>({stateFilter}{districtFilter !== 'All' ? ` - ${districtFilter}` : ''})</span>}
+                  </h3>
+                  <span style={{ fontSize: '13px', opacity: 0.7, marginTop: '5px', display: 'block' }}>Ranks dynamically update based on selected filters</span>
+                </div>
+                
+                <div className="filter-controls">
+                  <select value={genderFilter} onChange={e => {setGenderFilter(e.target.value); setCurrentPage(1);}} className="filter-select">
+                    <option value="All">All Genders</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                  </select>
+                  <select value={ageGroupFilter} onChange={e => {setAgeGroupFilter(e.target.value); setCurrentPage(1);}} className="filter-select">
+                    <option value="All">All Ages</option>
+                    <option value="U-10">Under 10</option>
+                    <option value="U-14">Under 14</option>
+                    <option value="U-18">Under 18</option>
+                  </select>
+                  
+                  {/* State Filter */}
+                  <select value={stateFilter} onChange={handleStateChange} className="filter-select">
+                    <option value="All">All States (National)</option>
+                    {allStates.map(st => <option key={st} value={st}>{st}</option>)}
+                  </select>
+                  
+                  {/* District Filter */}
+                  {stateFilter !== 'All' && (
+                    <select value={districtFilter} onChange={e => {setDistrictFilter(e.target.value); setCurrentPage(1);}} className="filter-select">
+                      <option value="All">All Districts</option>
+                      {availableDistricts.map(dst => <option key={dst} value={dst}>{dst}</option>)}
+                    </select>
+                  )}
+
+                  <span className="filter-page-indicator" style={{ fontSize: '14px', opacity: 0.8, marginLeft: '5px' }}>Page {currentPage} of {totalPages || 1}</span>
+                </div>
               </div>
 
               <div style={{ overflowX: 'auto' }}>
@@ -314,40 +410,50 @@ const Program = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentParticipants.map((rank, idx) => (
-                      <tr key={rank.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.03)', transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-light)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                        <td style={{ padding: '15px 20px', fontWeight: 'bold', color: 'var(--primary-dark)' }}>#{rank.air_rank}</td>
-                        <td style={{ padding: '15px 20px', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#e2e8f0', color: 'var(--primary-blue)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold' }}>
-                            {rank.students?.full_name?.charAt(0)}
-                          </div>
-                          <span style={{ fontWeight: '600', color: 'var(--text-dark)', fontSize: '15px' }}>{rank.students?.full_name}</span>
-                        </td>
-                        <td style={{ padding: '15px 20px', color: 'var(--text-dark)', fontWeight: 'bold' }}>{rank.metric_value}</td>
-                        <td style={{ padding: '15px 20px', color: 'var(--text-light)', fontSize: '14px' }}>{rank.students?.state}</td>
-                        <td style={{ padding: '15px 20px', color: 'var(--text-light)', fontSize: '14px' }}>{rank.students?.schools?.school_name || 'Independent'}</td>
-                        <td style={{ padding: '15px 20px', textAlign: 'right' }}>
-                          <button 
-                            onClick={() => setSelectedParticipant(rank)}
-                            style={{
-                              backgroundColor: 'transparent',
-                              color: 'var(--primary-blue)',
-                              border: '1px solid var(--primary-blue)',
-                              padding: '6px 15px',
-                              borderRadius: '20px',
-                              fontSize: '12px',
-                              fontWeight: 'bold',
-                              cursor: 'pointer',
-                              transition: 'all 0.3s ease'
-                            }}
-                            onMouseOver={(e) => { e.target.style.backgroundColor = 'var(--primary-blue)'; e.target.style.color = 'white'; }}
-                            onMouseOut={(e) => { e.target.style.backgroundColor = 'transparent'; e.target.style.color = 'var(--primary-blue)'; }}
-                          >
-                            View Profile
-                          </button>
-                        </td>
+                    {currentParticipants.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>No students listed here matching your selected filters.</td>
                       </tr>
-                    ))}
+                    ) : (
+                      currentParticipants.map((rank, idx) => (
+                        <tr key={rank.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.03)', transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-light)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                          <td style={{ padding: '15px 20px', fontWeight: 'bold', color: 'var(--primary-dark)' }}>#{rank.dynamic_rank}</td>
+                          <td style={{ padding: '15px 20px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#e2e8f0', color: 'var(--primary-blue)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', overflow: 'hidden' }}>
+                              {rank.students?.photo_url ? (
+                                <img src={rank.students.photo_url} alt={rank.students.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                rank.students?.full_name?.charAt(0)
+                              )}
+                            </div>
+                            <span style={{ fontWeight: '600', color: 'var(--text-dark)', fontSize: '15px' }}>{rank.students?.full_name}</span>
+                          </td>
+                          <td style={{ padding: '15px 20px', color: 'var(--text-dark)', fontWeight: 'bold' }}>{rank.metric_value}</td>
+                          <td style={{ padding: '15px 20px', color: 'var(--text-light)', fontSize: '14px' }}>{rank.students?.state}</td>
+                          <td style={{ padding: '15px 20px', color: 'var(--text-light)', fontSize: '14px' }}>{rank.students?.schools?.school_name || 'Independent'}</td>
+                          <td style={{ padding: '15px 20px', textAlign: 'right' }}>
+                            <button 
+                              onClick={() => setSelectedParticipant(rank)}
+                              style={{
+                                backgroundColor: 'transparent',
+                                color: 'var(--primary-blue)',
+                                border: '1px solid var(--primary-blue)',
+                                padding: '6px 15px',
+                                borderRadius: '20px',
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                transition: 'all 0.3s ease'
+                              }}
+                              onMouseOver={(e) => { e.target.style.backgroundColor = 'var(--primary-blue)'; e.target.style.color = 'white'; }}
+                              onMouseOut={(e) => { e.target.style.backgroundColor = 'transparent'; e.target.style.color = 'var(--primary-blue)'; }}
+                            >
+                              View Profile
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table></div>
               </div>
@@ -387,6 +493,65 @@ const Program = () => {
         metricName={metricName}
         onClose={() => setSelectedParticipant(null)} 
       />
+      
+      <style>{`
+        .filter-header-container {
+          padding: 25px 30px;
+          background-color: var(--primary-dark);
+          color: white;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 20px;
+        }
+        .filter-controls {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+        .filter-select {
+          padding: 8px 15px;
+          border-radius: 8px;
+          border: 1px solid #cbd5e1;
+          color: var(--text-dark);
+          outline: none;
+          font-size: 14px;
+          background-color: white;
+        }
+        
+        @media (max-width: 768px) {
+          .filter-header-container {
+            flex-direction: column;
+            align-items: stretch;
+            padding: 20px;
+            gap: 15px;
+          }
+          .filter-controls {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+          }
+          .filter-select {
+            width: 100%;
+          }
+          .filter-page-indicator {
+            grid-column: 1 / -1;
+            text-align: right;
+            margin-top: 5px;
+          }
+          .event-selector-container {
+            flex-direction: column;
+            align-items: stretch !important;
+          }
+          .event-selector-select {
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+        }
+      `}</style>
 
     </main>
   );

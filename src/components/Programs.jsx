@@ -7,32 +7,17 @@ const Programs = () => {
     {
       title: 'Youngest Fastest Athlete of India',
       icon: <Activity size={32} color="white" />,
-      description: "Our athletic program features Track Events like Time Trials and Height Jumps for various age groups. Competitions are held on grass, mud, or synthetic venues to discover India's fastest and most agile young athletes."
+      description: "Our athletic program features Track Events like Time Trials and 50m/100m dashes for various age groups. Competitions are held on grass, mud, or synthetic venues to discover India's fastest and most agile young athletes."
     },
     {
-      title: 'Youngest Fastest Skater of India',
-      icon: <Zap size={32} color="white" />,
-      description: "A thrilling speed-track competition for young skaters, featuring beginner, quad, and inline formats. Skaters compete in multi-lap races across different age groups to find the fastest young skater in the nation."
-    },
-    {
-      title: 'Youngest Fastest Cyclist of India',
-      icon: <Bike size={32} color="white" />,
-      description: "An exciting cycling event focusing on Time Trials and circuit races. Young cyclists compete across various distances from 250m to 500m to showcase their speed, endurance, and cycling proficiency."
-    },
-    {
-      title: 'Youngest Musician of India',
-      icon: <Music size={32} color="white" />,
-      description: 'A musician is an individual who creates, performs, or composes music. Music is a universal form of art and expression, and musicians play a pivotal role in bringing it to life.'
-    },
-    {
-      title: 'Youngest Artist of India',
-      icon: <Palette size={32} color="white" />,
-      description: 'Drawing is a creative and expressive art form that involves creating images, designs, or illustrations on a surface using various drawing tools and techniques. Drawing can be a hobby, a form of artistic expression, or a professional skill.'
-    },
-    {
-      title: 'Youngest Dancer of India',
+      title: 'Youngest High Jumper of India',
       icon: <Star size={32} color="white" />,
-      description: 'Celebrating the joy, rhythm, and grace of movement. We recognize the youngest dance talents who bring stories to life on the stage.'
+      description: "A thrilling high jump competition for young athletes, featuring beginner and advanced formats. Athletes compete to reach new heights across different age groups to find the best high jumper in the nation."
+    },
+    {
+      title: 'Youngest Thrower of India',
+      icon: <Zap size={32} color="white" />,
+      description: "An exciting throwing event focusing on distance and technique. Young athletes compete across various throwing styles to showcase their strength and proficiency."
     }
   ];
 

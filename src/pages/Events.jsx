@@ -5,6 +5,7 @@ import { Calendar, MapPin, Trophy, Users, Clock, CheckCircle, AlertCircle, X } f
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
+import emailjs from '@emailjs/browser';
 
 const Events = () => {
   const { user, role, profile } = useAuth();
@@ -161,6 +162,26 @@ const Events = () => {
       const currentPoints = studentData?.points || 0;
       await supabase.from('students').update({ points: currentPoints + 500 }).eq('id', profile.id);
       
+      // Send Event Registration Email
+      try {
+        await emailjs.send(
+          'service_f6n79v2',
+          'template_cuxgyxy',
+          {
+            full_name: profile.full_name,
+            email: user.email,
+            event_name: ev.name,
+            sport_category: ev.sport_category || 'General',
+            age_category: ev.age_category,
+            event_date: new Date(ev.event_date).toLocaleDateString(),
+            event_venue: ev.venue
+          },
+          'UKEENwEz0TyMGGdVF'
+        );
+      } catch(emailError) {
+        console.error('Failed to send event registration email:', emailError);
+      }
+
       Swal.fire({ title: 'Success!', text: "Successfully Registered for the Event! 🎉 You earned 500 Global Points!", icon: 'success' });
       setMyRegistrations([...myRegistrations, ev.id]);
     } catch (err) {

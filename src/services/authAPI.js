@@ -55,7 +55,8 @@ export const registerStudent = async (studentData) => {
       district: studentData.district,
       address: studentData.address,
       school_id: studentData.schoolId || null,
-      games_interested: studentData.games
+      games_interested: studentData.games,
+      photo_url: studentData.photoUrl || null
     }
   ]);
 

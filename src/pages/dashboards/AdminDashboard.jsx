@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Users, Building, Calendar, Trophy, Lock, Search, ChevronRight, PlusCircle, LayoutDashboard, Settings, ArrowLeft, Save, CheckCircle, Crown } from 'lucide-react';
+import { Users, Building, Calendar, Trophy, Lock, Search, ChevronRight, PlusCircle, LayoutDashboard, Settings, ArrowLeft, Save, CheckCircle, Crown, Award, ExternalLink } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import Swal from 'sweetalert2';
@@ -21,7 +21,7 @@ const AdminDashboard = () => {
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [eventData, setEventData] = useState({
     name: '', date: '', venue: '', age_category: '', type: 'TIME',
-    sport_category: '', reg_start: '', reg_end: ''
+    sport_category: '', sub_category: '', reg_start: '', reg_end: ''
   });
 
   // Scoring System State
@@ -37,6 +37,7 @@ const AdminDashboard = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentPerformances, setStudentPerformances] = useState([]);
   const [studentActiveEvents, setStudentActiveEvents] = useState([]);
+  const [studentCertificates, setStudentCertificates] = useState([]);
   const [loadingStudent, setLoadingStudent] = useState(false);
 
   // School Overview State
@@ -127,6 +128,18 @@ const AdminDashboard = () => {
       setStudentActiveEvents([]);
     }
 
+    const { data: certData } = await supabase
+      .from('certificates')
+      .select('*, events (name, event_date)')
+      .eq('student_id', student.id)
+      .order('created_at', { ascending: false });
+
+    if (certData) {
+      setStudentCertificates(certData);
+    } else {
+      setStudentCertificates([]);
+    }
+
     setLoadingStudent(false);
   };
 
@@ -172,6 +185,7 @@ const AdminDashboard = () => {
       const { error } = await supabase.from('events').insert([{
         name: eventData.name,
         sport_category: eventData.sport_category,
+        sub_category: eventData.sub_category,
         event_date: eventData.date,
         venue: eventData.venue,
         age_category: eventData.age_category,
@@ -185,7 +199,7 @@ const AdminDashboard = () => {
       
       Swal.fire({ title: 'Success!', text: "Event created successfully!", icon: 'success' });
       setShowEventForm(false);
-      setEventData({ name: '', date: '', venue: '', age_category: '', type: 'TIME', sport_category: '', reg_start: '', reg_end: '' });
+      setEventData({ name: '', date: '', venue: '', age_category: '', type: 'TIME', sport_category: '', sub_category: '', reg_start: '', reg_end: '' });
       fetchDashboardData();
     } catch (err) {
       Swal.fire({ title: 'Error', text: "Error creating event: " + err.message + "\n\nPlease ensure you ran the RLS SQL fix for events.", icon: 'error' });
@@ -599,6 +613,45 @@ const AdminDashboard = () => {
                         </table></div>
                       </div>
                     )}
+
+                    {/* Official Certificates */}
+                    <div style={{ marginTop: '40px' }}>
+                      <h3 style={{ fontSize: '18px', color: '#0f172a', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}><Award size={20} color="#10b981" /> Official Certificates</h3>
+                      
+                      {loadingStudent ? (
+                        <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading certificates...</div>
+                      ) : studentCertificates.length === 0 ? (
+                        <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', color: '#64748b' }}>
+                          This student has not downloaded any official certificates yet.
+                        </div>
+                      ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                          {studentCertificates.map(cert => (
+                            <div key={cert.id} style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '10px', borderRadius: '8px', color: '#10b981' }}>
+                                  <Award size={24} />
+                                </div>
+                                <div>
+                                  <h4 style={{ margin: '0 0 5px 0', color: '#0f172a', fontSize: '15px' }}>{cert.events?.name}</h4>
+                                  <div style={{ fontSize: '12px', color: '#64748b' }}>Generated: {new Date(cert.created_at).toLocaleDateString()}</div>
+                                </div>
+                              </div>
+                              <a 
+                                href={cert.pdf_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#f1f5f9', color: '#0f172a', padding: '10px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: 'bold', transition: 'background-color 0.2s' }}
+                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e2e8f0'}
+                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                              >
+                                View PDF <ExternalLink size={14} />
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -699,14 +752,22 @@ const AdminDashboard = () => {
                               <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Sport / Program</label>
                               <select required value={eventData.sport_category} onChange={e => setEventData({...eventData, sport_category: e.target.value})} style={inputStyle}>
                                 <option value="">Select Sport...</option>
-                                <option value="athletic">Athletic</option>
-                                <option value="cycling">Cycling</option>
-                                <option value="skating">Skating</option>
-                                <option value="dancer">Dancer</option>
-                                <option value="artist">Artist</option>
-                                <option value="musician">Musician</option>
+                                <option value="athlete">Athlete</option>
+                                <option value="highjump">High Jump</option>
+                                <option value="throw">Throw</option>
                               </select>
                             </div>
+                            {['athlete', 'highjump', 'throw'].includes(eventData.sport_category) && (
+                              <div>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Sub Category</label>
+                                <select required value={eventData.sub_category} onChange={e => setEventData({...eventData, sub_category: e.target.value})} style={inputStyle}>
+                                  <option value="">Select Sub Category...</option>
+                                  <option value="50m">50 m</option>
+                                  <option value="25m">25 m</option>
+                                  <option value="80m">80 m</option>
+                                </select>
+                              </div>
+                            )}
                             <div>
                               <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>Venue Location</label>
                               <input type="text" required value={eventData.venue} onChange={e => setEventData({...eventData, venue: e.target.value})} style={inputStyle} />
@@ -773,7 +834,7 @@ const AdminDashboard = () => {
                             <tr key={ev.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
                               <td style={{ padding: '20px 30px' }}>
                                 <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '15px' }}>{ev.name}</div>
-                                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px', textTransform: 'capitalize' }}>Program: {ev.sport_category || 'General'} • {ev.age_category}</div>
+                                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px', textTransform: 'capitalize' }}>Program: {ev.sport_category || 'General'} {ev.sub_category ? `(${ev.sub_category})` : ''} • {ev.age_category}</div>
                               </td>
                               <td style={{ padding: '20px 30px' }}>
                                 <div style={{ fontWeight: '500', color: '#0f172a', fontSize: '14px' }}>{new Date(ev.event_date).toLocaleDateString()}</div>

@@ -4,6 +4,7 @@ import { registerStudent } from '../services/authAPI';
 import { User, MapPin, Phone, Mail, Lock, Calendar, School, Gamepad2, ArrowRight, ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
+import emailjs from '@emailjs/browser';
 import * as india from '../lib/indiaData';
 import Swal from 'sweetalert2';
 
@@ -11,7 +12,7 @@ const RegisterStudent = () => {
   const [formData, setFormData] = useState({
     fullName: '', email: '', password: '', dob: '', gender: 'Male',
     parentName: '', state: '', district: '', address: '', schoolId: '', games: [],
-    board: 'Zila Parishad School'
+    board: 'Zila Parishad School', photoFile: null
   });
   const [loading, setLoading] = useState(false);
   const [schools, setSchools] = useState([]);
@@ -32,7 +33,43 @@ const RegisterStudent = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await registerStudent(formData);
+      let photoUrl = null;
+      if (formData.photoFile) {
+        const fileExt = formData.photoFile.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, formData.photoFile);
+        
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(fileName);
+        
+        photoUrl = publicUrl;
+      }
+
+      await registerStudent({ ...formData, photoUrl });
+
+      // Send Welcome Email via EmailJS
+      try {
+        await emailjs.send(
+          'service_f6n79v2', 
+          'template_ti6ox8e',
+          {
+            full_name: formData.fullName,
+            email: formData.email,
+            password: formData.password
+          },
+          'UKEENwEz0TyMGGdVF'
+        );
+        console.log('Welcome email sent successfully!');
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError);
+        // We don't block the user from proceeding if the email fails.
+      }
+
       window.location.href = '/dashboard/student';
     } catch (error) {
       Swal.fire({
@@ -101,6 +138,14 @@ const RegisterStudent = () => {
               <div style={inputContainerStyle}>
                 <User size={18} style={iconStyle} />
                 <input type="text" placeholder="Guardian's Name" required value={formData.parentName} onChange={e => setFormData({...formData, parentName: e.target.value})} style={inputStyle} />
+              </div>
+            </div>
+
+            <div style={inputGroupStyle}>
+              <label style={labelStyle}>Profile Photo</label>
+              <div style={inputContainerStyle}>
+                <User size={18} style={iconStyle} />
+                <input type="file" accept="image/*" required onChange={e => setFormData({...formData, photoFile: e.target.files[0]})} style={{...inputStyle, paddingLeft: '45px', paddingTop: '11px', paddingBottom: '11px'}} />
               </div>
             </div>
           </div>

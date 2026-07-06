@@ -16,7 +16,7 @@ const generateParticipants = (categoryName, count, metricType) => {
     const age = Math.floor(Math.random() * (12 - 5 + 1)) + 5; // ages 5-12
     const gender = Math.random() > 0.5 ? 'men' : 'women';
     const faceId = Math.floor(Math.random() * 80) + 1;
-    
+
     // Generate metric based on type
     let metricValue = '';
     if (metricType === 'Timing') {
@@ -45,46 +45,25 @@ const generateParticipants = (categoryName, count, metricType) => {
 };
 
 export const programsData = {
-  athletic: {
-    title: 'ATHLETIC PROGRAM',
+  athlete: {
+    title: 'ATHLETE PROGRAM',
     heroImage: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80',
     description: 'India’s premier grassroot athletics ranking platform focusing on speed, stamina, and agility.',
     metricName: 'Timing',
-    participants: generateParticipants('athletic', 30, 'Timing')
+    participants: generateParticipants('athlete', 30, 'Timing')
   },
-  cycling: {
-    title: 'CYCLING PROGRAM',
-    heroImage: 'https://images.unsplash.com/photo-1541625602330-2277a4c46182?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80',
-    description: 'Professional cycling rankings for young kids across 3-wheel and 2-wheel categories.',
-    metricName: 'Timing',
-    participants: generateParticipants('cycling', 30, 'Timing')
+  highjump: {
+    title: 'HIGH JUMP PROGRAM',
+    heroImage: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80',
+    description: 'Reaching new heights. The ultimate ranking platform for young high jumpers.',
+    metricName: 'Height',
+    participants: generateParticipants('highjump', 30, 'Score')
   },
-  skating: {
-    title: 'SKATING PROGRAM',
-    heroImage: 'https://images.unsplash.com/photo-1520045892732-304bc3ac5d8e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80',
-    description: 'Quad and Inline skating competitions tracking speed and technique.',
-    metricName: 'Timing',
-    participants: generateParticipants('skating', 30, 'Timing')
-  },
-  dancer: {
-    title: 'DANCE PROGRAM',
-    heroImage: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80',
-    description: 'Showcasing extraordinary rhythm and grace. Ranked by professional judges.',
-    metricName: 'Score',
-    participants: generateParticipants('dancer', 30, 'Score')
-  },
-  artist: {
-    title: 'ARTIST PROGRAM',
-    heroImage: 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80',
-    description: 'Celebrating creativity in coloring, drawing, and painting among young artists.',
-    metricName: 'Score',
-    participants: generateParticipants('artist', 30, 'Score')
-  },
-  musician: {
-    title: 'MUSICIAN PROGRAM',
-    heroImage: 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80',
-    description: 'Vocal and instrumental talent evaluation for the next generation of musical prodigies.',
-    metricName: 'Score',
-    participants: generateParticipants('musician', 30, 'Score')
+  throw: {
+    title: 'THROW PROGRAM',
+    heroImage: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80',
+    description: 'Showcasing strength and technique in various throwing events.',
+    metricName: 'Distance',
+    participants: generateParticipants('throw', 30, 'Score')
   }
 };
