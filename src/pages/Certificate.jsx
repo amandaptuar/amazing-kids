@@ -108,23 +108,30 @@ const Certificate = () => {
     try {
       const certElement = document.getElementById('certificate-container');
       
-      // FIX SCALING ISSUE: Temporarily remove the scaling class before taking a snapshot
-      const originalTransition = certElement.style.transition;
-      certElement.style.transition = 'none';
-      certElement.classList.remove('cert-scale');
-      
-      // Wait a fraction of a second for DOM to repaint at full size
+      // Create an off-screen clone for perfect high-resolution rendering regardless of screen size
+      const clone = certElement.cloneNode(true);
+      clone.style.position = 'absolute';
+      clone.style.top = '-9999px';
+      clone.style.left = '-9999px';
+      clone.style.transform = 'none';
+      clone.style.width = '1123px';
+      clone.style.height = '794px';
+      clone.classList.remove('cert-scale');
+      document.body.appendChild(clone);
+
+      // Wait a fraction of a second for DOM to render the clone
       await new Promise(resolve => setTimeout(resolve, 150));
 
-      const canvas = await html2canvas(certElement, {
+      const canvas = await html2canvas(clone, {
         scale: 2, 
         useCORS: true,
-        logging: false
+        logging: false,
+        width: 1123,
+        height: 794
       });
 
-      // RESTORE SCALING immediately after capture
-      certElement.classList.add('cert-scale');
-      certElement.style.transition = originalTransition;
+      // Cleanup clone
+      document.body.removeChild(clone);
 
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
@@ -355,6 +362,11 @@ const Certificate = () => {
                 <div style={{ borderBottom: '2px solid #94a3b8', height: '40px', marginBottom: '10px' }}></div>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: 'var(--primary-dark)', textTransform: 'uppercase', letterSpacing: '1px' }}>Managing Director</p>
               </div>
+            </div>
+
+            {/* Unique Certificate Number */}
+            <div style={{ position: 'absolute', bottom: '25px', left: '35px', fontSize: '11px', color: '#94a3b8', fontWeight: 'bold', letterSpacing: '1.5px', userSelect: 'none', fontFamily: 'monospace' }}>
+              CERT ID: AK-{eventId?.substring(0,4).toUpperCase()}-{studentId?.substring(0,4).toUpperCase()}
             </div>
 
           </div>

@@ -145,6 +145,13 @@ const Events = () => {
       return;
     }
 
+    // --- RESTRICTION 3: Registration Window Check ---
+    const regOpen = isRegistrationOpen(ev.reg_start_date, ev.reg_end_date);
+    if (!regOpen || isEventFinished(ev.event_date)) {
+      Swal.fire({ title: 'Registration Closed', text: "The registration window for this event has closed or the event has ended.", icon: 'error' });
+      return;
+    }
+
     setRegisteringId(ev.id);
     try {
       const { error } = await supabase.from('event_participants').insert({

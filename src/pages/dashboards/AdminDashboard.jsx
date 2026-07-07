@@ -15,6 +15,7 @@ const AdminDashboard = () => {
   const [schools, setSchools] = useState([]);
   const [events, setEvents] = useState([]);
   const [dataLoading, setDataLoading] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   
   // Create Event Form State
   const [showEventForm, setShowEventForm] = useState(false);
@@ -84,6 +85,7 @@ const AdminDashboard = () => {
     }
     
     setDataLoading(false);
+    setIsInitialLoad(false);
   };
 
   const handleViewStudent = async (student) => {
@@ -250,6 +252,11 @@ const AdminDashboard = () => {
   };
 
   const handleSaveScore = async (studentId) => {
+    if (scoringEvent.event_date < today) {
+      Swal.fire({ title: 'Event Closed', text: "Scores cannot be updated for an event that has already ended.", icon: 'error' });
+      return;
+    }
+
     const value = scores[studentId];
     if (!value) {
       Swal.fire({ title: 'Invalid Score', text: "Please enter a valid score/time.", icon: 'warning' });
@@ -281,7 +288,16 @@ const AdminDashboard = () => {
   };
 
 
-  if (loading) return <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}><div className="loader"></div></div>;
+  if (loading || isInitialLoad) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ width: '60px', height: '60px', border: '5px solid #e2e8f0', borderTopColor: '#0f172a', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '20px' }}></div>
+        <h2 style={{ fontFamily: 'var(--font-heading)', color: 'var(--primary-dark)', margin: 0, fontSize: '24px' }}>Loading Admin Center...</h2>
+        <p style={{ color: '#64748b', fontSize: '15px', marginTop: '10px' }}>Fetching secure platform data</p>
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
   
   if (role !== 'admin') return <AdminLogin forceAdminLogin={forceAdminLogin} />;
 

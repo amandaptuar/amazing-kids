@@ -78,9 +78,13 @@ const Store = () => {
   }, [user, role, profile]);
 
   const handleRedeem = async (goodie) => {
-    if (!user || role !== 'student') {
+    if (!user) {
       setShowLoginPopup(true);
       return;
+    }
+    
+    if (role !== 'student') {
+      return; // Handled by button disabled state now, but just in case
     }
 
     if (points < goodie.cost) {
@@ -297,19 +301,25 @@ const Store = () => {
 
                   <button 
                     onClick={() => handleRedeem(item)}
-                    disabled={redeemingId === item.id || (user && role === 'student' && points < item.cost)}
+                    disabled={redeemingId === item.id || (user && role !== 'student') || (user && role === 'student' && points < item.cost)}
                     style={{ 
                       width: '100%', padding: '16px', 
-                      backgroundColor: (!user || role !== 'student' || points >= item.cost) ? item.color : '#f1f5f9', 
-                      color: (!user || role !== 'student' || points >= item.cost) ? 'white' : '#94a3b8', 
+                      backgroundColor: (!user || (user && role === 'student' && points >= item.cost)) ? item.color : '#f1f5f9', 
+                      color: (!user || (user && role === 'student' && points >= item.cost)) ? 'white' : '#94a3b8', 
                       border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '15px',
-                      cursor: (!user || role !== 'student' || points >= item.cost) ? 'pointer' : 'not-allowed',
-                      boxShadow: (!user || role !== 'student' || points >= item.cost) ? `0 10px 20px ${item.color}40` : 'none',
+                      cursor: (!user || (user && role === 'student' && points >= item.cost)) ? 'pointer' : 'not-allowed',
+                      boxShadow: (!user || (user && role === 'student' && points >= item.cost)) ? `0 10px 20px ${item.color}40` : 'none',
                       transition: 'all 0.2s',
                       display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'
                     }}
                   >
-                    {redeemingId === item.id ? 'Processing...' : (!user || role !== 'student') ? 'Login to Redeem' : (points >= item.cost ? 'Redeem Now' : 'Not Enough Points')}
+                    {redeemingId === item.id 
+                      ? 'Processing...' 
+                      : (!user) 
+                        ? 'Login to Redeem' 
+                        : (role !== 'student') 
+                          ? 'Students Only' 
+                          : (points >= item.cost ? 'Redeem Now' : 'Not Enough Points')}
                   </button>
                 </div>
               </div>

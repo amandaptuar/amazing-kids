@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Riya Kumari — Student Performance Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* ---- Color tokens ---- */
+    --ink:            #101832;
+    --ink-panel:      #182247;
+    --ink-panel-2:    #202c56;
+    --paper:          #F7F6F2;
+    --paper-dim:      #EDEBE3;
+    --card:           #FFFFFF;
+    --text-on-ink:    #F4F2EA;
+    --text-on-ink-dim:#AEB6D6;
+    --text-main:      #16203B;
+    --text-dim:       #5B6480;
+    --hairline:       #E3E1D8;
+
+    --gold:           #E7B740;
+    --gold-deep:      #B5872A;
+    --silver:         #B8C2D6;
+    --silver-deep:    #7E8AA6;
+    --bronze:         #C9834E;
+    --bronze-deep:    #96562C;
+    --teal:           #2FAE8B;
+
+    /* ---- Type ---- */
+    --font-display: 'Space Grotesk', 'Inter', sans-serif;
+    --font-body:    'Inter', -apple-system, sans-serif;
+    --font-mono:    'IBM Plex Mono', 'SFMono-Regular', monospace;
+
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 8px;
+    --shadow-card: 0 1px 2px rgba(16,24,50,0.04), 0 8px 24px -8px rgba(16,24,50,0.10);
+    --shadow-lift: 0 4px 8px rgba(16,24,50,0.06), 0 16px 32px -12px rgba(16,24,50,0.18);
+  }
+
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: smooth; }
+  body{
+    margin:0;
+    background: var(--paper);
+    color: var(--text-main);
+    font-family: var(--font-body);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,h2,h3{ font-family: var(--font-display); margin:0; letter-spacing:-0.01em; }
+  button{ font-family: inherit; cursor:pointer; }
+  a{ color: inherit; }
+  :focus-visible{
+    outline: 2px solid var(--gold-deep);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation: none !important; transition: none !important; }
+  }
+
+  /* ================= LAYOUT SHELL ================= */
+  .shell{ max-width: 1180px; margin: 0 auto; padding: 0 20px 64px; }
+
+  /* ================= TOPBAR ================= */
+  .topbar{
+    background: var(--ink);
+    color: var(--text-on-ink);
+    padding: 16px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .topbar-inner{
+    max-width: 1180px;
+    margin: 0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family: var(--font-display);
+    font-weight:700;
+    font-size: 1.05rem;
+    letter-spacing: -0.01em;
+  }
+  .brand-mark{
+    width:34px; height:34px;
+    border-radius: 9px;
+    background: linear-gradient(145deg, var(--gold) 0%, var(--bronze) 100%);
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--font-display);
+    font-weight:700;
+    font-size:0.85rem;
+    color: var(--ink);
+    flex-shrink:0;
+  }
+  .brand-sub{
+    font-family: var(--font-body);
+    font-weight:500;
+    font-size:0.72rem;
+    color: var(--text-on-ink-dim);
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    display:block;
+    margin-top:1px;
+  }
+  .topbar-actions{ display:flex; align-items:center; gap:10px; }
+  .points-pill{
+    display:flex; align-items:center; gap:8px;
+    background: var(--ink-panel);
+    border:1px solid rgba(255,255,255,0.08);
+    padding:7px 14px 7px 10px;
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-weight:600;
+    font-size:0.85rem;
+  }
+  .points-pill .dot{
+    width:8px; height:8px; border-radius:50%;
+    background: var(--gold);
+    box-shadow: 0 0 0 3px rgba(231,183,64,0.18);
+  }
+  .points-pill .label{
+    font-family: var(--font-body);
+    font-weight:500;
+    color: var(--text-on-ink-dim);
+    text-transform:uppercase;
+    font-size:0.62rem;
+    letter-spacing:0.06em;
+    margin-right:2px;
+  }
+  .btn-shop{
+    background: var(--gold);
+    color: var(--ink);
+    border:none;
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-weight:600;
+    font-size:0.85rem;
+    display:flex; align-items:center; gap:6px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  }
+  .btn-shop:hover{ background:#f0c65b; transform: translateY(-1px); box-shadow: 0 6px 16px -6px rgba(231,183,64,0.6); }
+  .btn-shop svg{ width:14px; height:14px; transition: transform 0.15s ease; }
+  .btn-shop:hover svg{ transform: translateX(2px); }
+
+  /* ================= HERO / PROFILE ================= */
+  .hero-band{ background: var(--ink); padding-bottom: 86px; }
+  .profile-card{
+    margin-top: -58px;
+    background: var(--card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lift);
+    padding: 28px;
+    display:grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 24px;
+    align-items:center;
+  }
+  .avatar{
+    width:84px; height:84px;
+    border-radius: 20px;
+    background: linear-gradient(150deg, var(--ink-panel-2), var(--ink));
+    color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--font-display);
+    font-weight:700;
+    font-size: 1.7rem;
+    flex-shrink:0;
+    position:relative;
+  }
+  .avatar::after{
+    content:'';
+    position:absolute;
+    inset:-4px;
+    border-radius: 24px;
+    border: 2px solid var(--gold);
+    opacity:0.5;
+  }
+  .profile-id-block{ min-width:0; }
+  .profile-name-row{ display:flex; align-items:center; gap:10px; margin-bottom:4px; }
+  .profile-name{ font-size: 1.5rem; font-weight:700; }
+  .btn-edit-inline{
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    width:28px; height:28px;
+    border-radius: 8px;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .btn-edit-inline:hover{ border-color: var(--gold-deep); background: #fdf7ea; }
+  .btn-edit-inline svg{ width:13px; height:13px; }
+  .profile-meta-row{
+    display:flex; flex-wrap:wrap; align-items:center; gap: 8px 14px;
+    color: var(--text-dim);
+    font-size: 0.88rem;
+  }
+  .profile-meta-row .id-chip{
+    font-family: var(--font-mono);
+    font-weight:600;
+    background: var(--paper-dim);
+    color: var(--text-main);
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size:0.78rem;
+    letter-spacing: 0.02em;
+  }
+  .meta-item{ display:flex; align-items:center; gap:5px; }
+  .meta-item svg{ width:14px; height:14px; opacity:0.6; flex-shrink:0; }
+  .dob-block{
+    display:flex; align-items:center; gap:14px;
+    justify-self:end;
+    text-align:right;
+  }
+  .dob-stat{ display:flex; flex-direction:column; align-items:flex-end; gap:2px; }
+  .dob-stat .label{ font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em; color: var(--text-dim); font-weight:600; }
+  .dob-stat .value{ font-family: var(--font-mono); font-weight:600; font-size:1rem; }
+  .age-badge{
+    background: var(--paper-dim);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    display:flex; flex-direction:column; align-items:center;
+    min-width: 62px;
+  }
+  .age-badge .num{ font-family: var(--font-display); font-weight:700; font-size:1.25rem; line-height:1; color: var(--text-main); }
+  .age-badge .txt{ font-size:0.6rem; text-transform:uppercase; letter-spacing:0.05em; color: var(--text-dim); font-weight:600; margin-top:2px; }
+  .btn-edit-dob{
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    width:34px; height:34px;
+    border-radius: 10px;
+    display:flex; align-items:center; justify-content:center;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    flex-shrink:0;
+  }
+  .btn-edit-dob:hover{ border-color: var(--gold-deep); background: #fdf7ea; }
+  .btn-edit-dob svg{ width:15px; height:15px; }
+
+  /* ================= RANK MEDALS ================= */
+  .section-heading{
+    margin: 44px 0 6px;
+  }
+  .section-heading h2{ font-size:1.15rem; font-weight:700; }
+  .section-heading p{ margin:4px 0 0; color: var(--text-dim); font-size:0.88rem; }
+
+  .ranks-row{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top:18px;
+  }
+  .rank-card{
+    background: var(--card);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+    padding: 20px;
+    display:flex;
+    align-items:center;
+    gap:16px;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .rank-card:hover{ transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+  .medal-svg{ flex-shrink:0; }
+  .rank-info{ min-width:0; }
+  .rank-info .scope{ font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; color: var(--text-dim); font-weight:600; }
+  .rank-info .rank-num{ font-family: var(--font-display); font-weight:700; font-size:1.6rem; margin-top:2px; }
+  .rank-info .rank-tier{ font-size:0.76rem; font-weight:600; margin-top:2px; }
+
+  /* ================= COMPETITIONS ================= */
+  .competitions-wrap{
+    margin-top: 14px;
+    background: var(--card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    overflow:hidden;
+  }
+  table{ width:100%; border-collapse: collapse; }
+  thead th{
+    text-align:left;
+    font-size:0.7rem;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color: var(--text-dim);
+    font-weight:600;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--hairline);
+    white-space:nowrap;
+  }
+  tbody td{
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--hairline);
+    vertical-align:middle;
+  }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr{ transition: background 0.15s ease; }
+  tbody tr:hover{ background: #FBFAF7; }
+  .comp-name{ font-weight:600; font-size:0.95rem; }
+  .comp-sub{ font-size:0.78rem; color: var(--text-dim); margin-top:2px; text-transform:capitalize; }
+  .score-value{ font-family: var(--font-mono); font-weight:600; font-size:1.05rem; }
+  .rank-chip{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family: var(--font-mono);
+    font-weight:600;
+    font-size:0.85rem;
+  }
+  .rank-chip .swatch{ width:9px; height:9px; border-radius:50%; }
+  .btn-cert{
+    display:inline-flex; align-items:center; gap:7px;
+    background: var(--ink);
+    color: var(--text-on-ink);
+    border:none;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-weight:600;
+    font-size:0.82rem;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+  .btn-cert:hover{ background: var(--ink-panel-2); transform: translateY(-1px); }
+  .btn-cert svg{ width:13px; height:13px; }
+
+  /* mobile competition cards */
+  .comp-cards{ display:none; }
+  .comp-card{
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .comp-card:last-child{ border-bottom:none; }
+  .comp-card-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:12px; }
+  .comp-card-stats{ display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin-bottom:14px; }
+  .comp-stat .label{ font-size:0.66rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-dim); font-weight:600; }
+  .comp-stat .val{ margin-top:3px; }
+
+  footer.foot-note{
+    text-align:center;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    margin-top: 40px;
+  }
+
+  /* ================= TOAST ================= */
+  .toast{
+    position: fixed;
+    left:50%;
+    bottom: 28px;
+    transform: translate(-50%, 20px);
+    background: var(--ink);
+    color: var(--text-on-ink);
+    padding: 12px 20px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight:500;
+    box-shadow: var(--shadow-lift);
+    opacity:0;
+    pointer-events:none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 100;
+    white-space:nowrap;
+  }
+  .toast.show{ opacity:1; transform: translate(-50%, 0); pointer-events:auto; }
+
+  /* ================= MODALS ================= */
+  .modal-overlay{
+    position:fixed; inset:0;
+    background: rgba(16,24,50,0.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding: 20px;
+    z-index: 90;
+    backdrop-filter: blur(2px);
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal{
+    background:#fff;
+    border-radius: var(--radius-lg);
+    max-width: 420px;
+    width:100%;
+    padding: 26px;
+    box-shadow: var(--shadow-lift);
+    animation: modalIn 0.2s ease;
+  }
+  @keyframes modalIn{ from{ opacity:0; transform: translateY(8px) scale(0.98);} to{opacity:1; transform:none;} }
+  .modal h3{ font-size:1.1rem; margin-bottom: 6px; }
+  .modal p.hint{ color: var(--text-dim); font-size:0.85rem; margin: 0 0 18px; }
+  .field-label{ display:block; font-size:0.78rem; font-weight:600; color: var(--text-dim); margin-bottom:6px; }
+  .field-input{
+    width:100%;
+    padding: 11px 13px;
+    border-radius: 10px;
+    border: 1px solid var(--hairline);
+    font-family: var(--font-mono);
+    font-size:0.95rem;
+    background: var(--paper);
+    color: var(--text-main);
+  }
+  .field-input:focus{ border-color: var(--gold-deep); }
+  .field-error{ color:#B23A3A; font-size:0.78rem; margin-top:6px; display:none; }
+  .modal-actions{ display:flex; gap:10px; margin-top:20px; }
+  .btn-primary, .btn-ghost{
+    flex:1;
+    padding: 11px 14px;
+    border-radius: 10px;
+    font-weight:600;
+    font-size:0.88rem;
+    border:none;
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+  .btn-primary{ background: var(--ink); color:#fff; }
+  .btn-primary:hover{ background: var(--ink-panel-2); }
+  .btn-ghost{ background: var(--paper-dim); color: var(--text-main); }
+  .btn-ghost:hover{ background: var(--hairline); }
+
+  /* Certificate modal specifics */
+  .modal-cert{ max-width: 600px; }
+  .certificate{
+    border: 2px solid var(--gold);
+    border-radius: 14px;
+    padding: 34px 28px;
+    text-align:center;
+    background:
+      radial-gradient(circle at top left, rgba(231,183,64,0.08), transparent 55%),
+      radial-gradient(circle at bottom right, rgba(231,183,64,0.08), transparent 55%),
+      #fff;
+  }
+  .certificate .eyebrow{ font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase; color: var(--gold-deep); font-weight:700; }
+  .certificate h2{ font-size:1.5rem; margin: 10px 0 2px; }
+  .certificate .cert-sub{ color: var(--text-dim); font-size:0.85rem; margin-bottom: 22px; }
+  .certificate .cert-name{ font-family: var(--font-display); font-weight:700; font-size:1.7rem; margin: 6px 0 4px; }
+  .certificate .cert-line{ color: var(--text-dim); font-size:0.9rem; }
+  .certificate .cert-grid{
+    display:grid; grid-template-columns: repeat(3,1fr); gap:14px;
+    margin: 26px 0 8px;
+    padding-top: 20px;
+    border-top: 1px dashed var(--hairline);
+  }
+  .certificate .cert-grid .label{ font-size:0.66rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dim); font-weight:600; }
+  .certificate .cert-grid .val{ font-family: var(--font-mono); font-weight:600; margin-top:4px; }
+  .cert-actions{ display:flex; gap:10px; margin-top:22px; }
+
+  @media print{
+    body *{ visibility:hidden; }
+    .certificate, .certificate *{ visibility:visible; }
+    .certificate{ position:fixed; inset:0; margin:40px auto; max-width:600px; border-radius:0; }
+    .modal-overlay{ position:static; background:none; padding:0; }
+    .cert-actions{ display:none !important; }
+  }
+
+  /* ================= ENTRANCE MOTION ================= */
+  .profile-card, .rank-card, .competitions-wrap{
+    animation: riseIn 0.5s ease both;
+  }
+  .rank-card:nth-child(1){ animation-delay: 0.05s; }
+  .rank-card:nth-child(2){ animation-delay: 0.12s; }
+  .rank-card:nth-child(3){ animation-delay: 0.19s; }
+  .competitions-wrap{ animation-delay: 0.24s; }
+  @keyframes riseIn{ from{ opacity:0; transform: translateY(10px);} to{opacity:1; transform:none;} }
+
+  /* ================= RESPONSIVE ================= */
+  @media (max-width: 860px){
+    .ranks-row{ grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 720px){
+    .profile-card{
+      grid-template-columns: auto 1fr;
+      row-gap: 18px;
+    }
+    .dob-block{
+      grid-column: 1 / -1;
+      justify-self: stretch;
+      justify-content: space-between;
+      border-top: 1px solid var(--hairline);
+      padding-top: 16px;
+      text-align:left;
+    }
+    .dob-stat{ align-items:flex-start; }
+    table{ display:none; }
+    .comp-cards{ display:block; }
+  }
+
+  @media (max-width: 480px){
+    .shell{ padding: 0 14px 48px; }
+    .hero-band{ padding-bottom: 70px; }
+    .profile-card{ margin-top:-46px; padding: 20px; gap:16px; }
+    .avatar{ width:60px; height:60px; font-size:1.25rem; border-radius:16px; }
+    .profile-name{ font-size:1.2rem; }
+    .brand-sub{ display:none; }
+    .points-pill .label{ display:none; }
+    .section-heading{ margin-top:36px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-mark">AK</div>
+      <div>
+        Student Dashboard
+        <span class="brand-sub">AKI Talent Program</span>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <div class="points-pill">
+        <span class="dot"></span>
+        <span class="label">Points</span>
+        <span id="pointsValue">500</span>
+      </div>
+      <button class="btn-shop" id="shopBtn">
+        Shop Goodies
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="hero-band"></div>
+
+<div class="shell" style="margin-top:0;">
+
+  <!-- PROFILE CARD -->
+  <div class="profile-card">
+    <div class="avatar" id="avatarInitials">RK</div>
+
+    <div class="profile-id-block">
+      <div class="profile-name-row">
+        <div class="profile-name" id="profileNameDisplay">Riya Kumari</div>
+        <button class="btn-edit-inline" id="editProfileBtn" aria-label="Update name and address">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>
+        </button>
+      </div>
+      <div class="profile-meta-row">
+        <span class="id-chip">AKI202610012</span>
+        <span class="meta-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          <span id="profileAddressDisplay">Jalna, Maharashtra</span>
+        </span>
+        <span class="meta-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22V6a2 2 0 012-2h12a2 2 0 012 2v16M4 22h16M9 22V9h6v13"/></svg>
+          Don Bosco School
+        </span>
+      </div>
+    </div>
+
+    <div class="dob-block">
+      <div class="dob-stat">
+        <span class="label">Date of birth</span>
+        <span class="value" id="dobDisplay">Not set</span>
+      </div>
+      <div class="age-badge">
+        <span class="num" id="ageDisplay">—</span>
+        <span class="txt">Years</span>
+      </div>
+      <button class="btn-edit-dob" id="editDobBtn" aria-label="Update date of birth">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- PERSONAL BEST RANKS -->
+  <div class="section-heading">
+    <h2>Personal Best Ranks</h2>
+    <p>Your highest achievements across all participated events.</p>
+  </div>
+  <div class="ranks-row" id="ranksRow"><!-- injected --></div>
+
+  <!-- COMPETITIONS -->
+  <div class="section-heading">
+    <h2>My Competitions &amp; Live Ranks</h2>
+    <p>Every event you've entered, and how it's scored.</p>
+  </div>
+
+  <div class="competitions-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Competition Details</th>
+          <th>Performance Score</th>
+          <th>All India Rank</th>
+          <th>State Rank</th>
+          <th>Certificate</th>
+        </tr>
+      </thead>
+      <tbody id="compTableBody"><!-- injected --></tbody>
+    </table>
+    <div class="comp-cards" id="compCards"><!-- injected --></div>
+  </div>
+
+  <footer class="foot-note">Data shown reflects your latest verified competition results.</footer>
+</div>
+
+<!-- DOB MODAL -->
+<div class="modal-overlay" id="dobModal">
+  <div class="modal">
+    <h3>Update date of birth</h3>
+    <p class="hint">This keeps your age accurate for age-group eligibility across competitions.</p>
+    <label class="field-label" for="dobInput">Date of birth</label>
+    <input type="date" id="dobInput" class="field-input" max="">
+    <div class="field-error" id="dobError">Please choose a valid date of birth.</div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="dobCancel">Cancel</button>
+      <button class="btn-primary" id="dobSave">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT PROFILE MODAL (name + address) -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal">
+    <h3>Update profile details</h3>
+    <p class="hint">Keep your name and address current so certificates and mailers reach the right place.</p>
+
+    <label class="field-label" for="nameInput">Full name</label>
+    <input type="text" id="nameInput" class="field-input" style="font-family: var(--font-body); margin-bottom:16px;" placeholder="e.g. Riya Kumari">
+
+    <label class="field-label" for="addressInput">Address (city, state)</label>
+    <input type="text" id="addressInput" class="field-input" style="font-family: var(--font-body);" placeholder="e.g. Jalna, Maharashtra">
+
+    <div class="field-error" id="profileError">Please fill in both fields before saving.</div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="profileCancel">Cancel</button>
+      <button class="btn-primary" id="profileSave">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- CERTIFICATE MODAL -->
+<div class="modal-overlay" id="certModal">
+  <div class="modal modal-cert">
+    <div class="certificate" id="certificateBody"><!-- injected --></div>
+    <div class="cert-actions">
+      <button class="btn-ghost" id="certClose">Close</button>
+      <button class="btn-primary" id="certPrint">Print / Save as PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------------------------------------------
+     DATA — swap this for an API response in production
+  --------------------------------------------------- */
+  const student = {
+    name: "Riya Kumari",
+    id: "AKI202610012",
+    location: "Jalna, Maharashtra",
+    school: "Don Bosco School",
+    points: 500,
+    dob: null // set via "Update DOB" — persisted in-memory for this session
+  };
+  // name & location are also editable via the "Update profile details" modal,
+  // held in-memory for this session — wire to your backend as needed.
+
+  const personalBest = [
+    { scope: "All India Rank", rank: 3 },
+    { scope: "State Rank",     rank: 2 },
+    { scope: "District Rank",  rank: 1 }
+  ];
+
+  const competitions = [
+    {
+      name: "Athlete Game",
+      category: "Athlete",
+      date: "2026-07-24",
+      score: 120,
+      allIndiaRank: 3,
+      stateRank: 2
+    }
+  ];
+
+  /* ---------------------------------------------------
+     HELPERS
+  --------------------------------------------------- */
+  function tierFor(rank){
+    if(rank === 1) return { name:"gold",   color: getVar('--gold'),   deep: getVar('--gold-deep')   };
+    if(rank === 2) return { name:"silver", color: getVar('--silver'), deep: getVar('--silver-deep') };
+    if(rank === 3) return { name:"bronze", color: getVar('--bronze'), deep: getVar('--bronze-deep') };
+    return { name:"steel", color: getVar('--hairline'), deep: getVar('--text-dim') };
+  }
+  function getVar(name){
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+  function medalSVG(rank, size){
+    size = size || 56;
+    const t = tierFor(rank);
+    return `
+    <svg class="medal-svg" width="${size}" height="${size}" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20 30 L11 50 L20 47 L25 54 L33 36" fill="${t.color}" opacity="0.55"/>
+      <path d="M36 30 L45 50 L36 47 L31 54 L23 36" fill="${t.color}" opacity="0.35"/>
+      <circle cx="28" cy="24" r="18" fill="${t.color}"/>
+      <circle cx="28" cy="24" r="18" fill="none" stroke="${t.deep}" stroke-width="2"/>
+      <text x="28" y="30" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="16" fill="#16203B">#${rank}</text>
+    </svg>`;
+  }
+  function tierLabel(rank){
+    if(rank === 1) return "Top rank";
+    if(rank === 2) return "Runner-up";
+    if(rank === 3) return "Podium finish";
+    return "Ranked";
+  }
+  function formatDate(iso){
+    const d = new Date(iso + "T00:00:00");
+    return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+  }
+  function calcAge(dobIso){
+    const dob = new Date(dobIso + "T00:00:00");
+    const now = new Date();
+    let age = now.getFullYear() - dob.getFullYear();
+    const m = now.getMonth() - dob.getMonth();
+    if(m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;
+    return age;
+  }
+  function initials(name){
+    return name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0,2).toUpperCase();
+  }
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  /* ---------------------------------------------------
+     RENDER: profile
+  --------------------------------------------------- */
+  document.getElementById('pointsValue').textContent = student.points;
+
+  function renderProfile(){
+    document.getElementById('avatarInitials').textContent = initials(student.name);
+    document.getElementById('profileNameDisplay').textContent = student.name;
+    document.getElementById('profileAddressDisplay').textContent = student.location;
+  }
+  renderProfile();
+
+  function renderDob(){
+    const dobDisplay = document.getElementById('dobDisplay');
+    const ageDisplay = document.getElementById('ageDisplay');
+    if(student.dob){
+      dobDisplay.textContent = formatDate(student.dob);
+      ageDisplay.textContent = calcAge(student.dob);
+    } else {
+      dobDisplay.textContent = "Not set";
+      ageDisplay.textContent = "—";
+    }
+  }
+  renderDob();
+
+  /* ---------------------------------------------------
+     RENDER: personal best rank medals
+  --------------------------------------------------- */
+  const ranksRow = document.getElementById('ranksRow');
+  ranksRow.innerHTML = personalBest.map(r => `
+    <div class="rank-card">
+      ${medalSVG(r.rank, 56)}
+      <div class="rank-info">
+        <div class="scope">${r.scope}</div>
+        <div class="rank-num">#${r.rank}</div>
+        <div class="rank-tier" style="color:${tierFor(r.rank).deep}">${tierLabel(r.rank)}</div>
+      </div>
+    </div>
+  `).join('');
+
+  /* ---------------------------------------------------
+     RENDER: competitions (table + mobile cards)
+  --------------------------------------------------- */
+  const tbody = document.getElementById('compTableBody');
+  const cardsWrap = document.getElementById('compCards');
+
+  function rankChip(rank){
+    const t = tierFor(rank);
+    return `<span class="rank-chip"><span class="swatch" style="background:${t.color}"></span>#${rank}</span>`;
+  }
+
+  tbody.innerHTML = competitions.map((c, i) => `
+    <tr>
+      <td>
+        <div class="comp-name">${c.name}</div>
+        <div class="comp-sub">${c.category} • ${formatDate(c.date)}</div>
+      </td>
+      <td><span class="score-value">${c.score}</span></td>
+      <td>${rankChip(c.allIndiaRank)}</td>
+      <td>${rankChip(c.stateRank)}</td>
+      <td>
+        <button class="btn-cert" data-idx="${i}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
+          Download
+        </button>
+      </td>
+    </tr>
+  `).join('');
+
+  cardsWrap.innerHTML = competitions.map((c, i) => `
+    <div class="comp-card">
+      <div class="comp-card-top">
+        <div>
+          <div class="comp-name">${c.name}</div>
+          <div class="comp-sub">${c.category} • ${formatDate(c.date)}</div>
+        </div>
+      </div>
+      <div class="comp-card-stats">
+        <div class="comp-stat"><div class="label">Score</div><div class="val score-value">${c.score}</div></div>
+        <div class="comp-stat"><div class="label">All India</div><div class="val">${rankChip(c.allIndiaRank)}</div></div>
+        <div class="comp-stat"><div class="label">State</div><div class="val">${rankChip(c.stateRank)}</div></div>
+      </div>
+      <button class="btn-cert" data-idx="${i}" style="width:100%; justify-content:center;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
+        Download certificate
+      </button>
+    </div>
+  `).join('');
+
+  /* ---------------------------------------------------
+     CERTIFICATE MODAL
+  --------------------------------------------------- */
+  const certModal = document.getElementById('certModal');
+  const certificateBody = document.getElementById('certificateBody');
+
+  function openCertificate(idx){
+    const c = competitions[idx];
+    certificateBody.innerHTML = `
+      <div class="eyebrow">Certificate of Achievement</div>
+      <h2>${c.name}</h2>
+      <div class="cert-sub">${c.category} • ${formatDate(c.date)}</div>
+      <div class="cert-line">This certifies that</div>
+      <div class="cert-name">${student.name}</div>
+      <div class="cert-line">has achieved the following result</div>
+      <div class="cert-grid">
+        <div><div class="label">Score</div><div class="val">${c.score}</div></div>
+        <div><div class="label">All India Rank</div><div class="val">#${c.allIndiaRank}</div></div>
+        <div><div class="label">State Rank</div><div class="val">#${c.stateRank}</div></div>
+      </div>
+    `;
+    certModal.classList.add('open');
+  }
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-cert');
+    if(btn){ openCertificate(Number(btn.dataset.idx)); }
+  });
+  document.getElementById('certClose').addEventListener('click', () => certModal.classList.remove('open'));
+  document.getElementById('certPrint').addEventListener('click', () => window.print());
+  certModal.addEventListener('click', (e) => { if(e.target === certModal) certModal.classList.remove('open'); });
+
+  /* ---------------------------------------------------
+     DOB MODAL
+  --------------------------------------------------- */
+  const dobModal = document.getElementById('dobModal');
+  const dobInput = document.getElementById('dobInput');
+  const dobError = document.getElementById('dobError');
+
+  const today = new Date();
+  dobInput.max = today.toISOString().slice(0,10);
+
+  document.getElementById('editDobBtn').addEventListener('click', () => {
+    dobError.style.display = 'none';
+    dobInput.value = student.dob || '';
+    dobModal.classList.add('open');
+    setTimeout(() => dobInput.focus(), 50);
+  });
+  document.getElementById('dobCancel').addEventListener('click', () => dobModal.classList.remove('open'));
+  dobModal.addEventListener('click', (e) => { if(e.target === dobModal) dobModal.classList.remove('open'); });
+
+  document.getElementById('dobSave').addEventListener('click', () => {
+    const val = dobInput.value;
+    if(!val || new Date(val) > today){
+      dobError.style.display = 'block';
+      return;
+    }
+    student.dob = val;
+    renderDob();
+    dobModal.classList.remove('open');
+    showToast('Date of birth updated');
+  });
+
+  /* ---------------------------------------------------
+     EDIT PROFILE MODAL (name + address)
+  --------------------------------------------------- */
+  const profileModal = document.getElementById('profileModal');
+  const nameInput = document.getElementById('nameInput');
+  const addressInput = document.getElementById('addressInput');
+  const profileError = document.getElementById('profileError');
+
+  document.getElementById('editProfileBtn').addEventListener('click', () => {
+    profileError.style.display = 'none';
+    nameInput.value = student.name;
+    addressInput.value = student.location;
+    profileModal.classList.add('open');
+    setTimeout(() => nameInput.focus(), 50);
+  });
+  document.getElementById('profileCancel').addEventListener('click', () => profileModal.classList.remove('open'));
+  profileModal.addEventListener('click', (e) => { if(e.target === profileModal) profileModal.classList.remove('open'); });
+
+  document.getElementById('profileSave').addEventListener('click', () => {
+    const nameVal = nameInput.value.trim();
+    const addressVal = addressInput.value.trim();
+    if(!nameVal || !addressVal){
+      profileError.style.display = 'block';
+      return;
+    }
+    student.name = nameVal;
+    student.location = addressVal;
+    renderProfile();
+    profileModal.classList.remove('open');
+    showToast('Profile details updated');
+  });
+
+  /* ---------------------------------------------------
+     SHOP GOODIES placeholder
+  --------------------------------------------------- */
+  document.getElementById('shopBtn').addEventListener('click', () => {
+    showToast('Goodies store opens soon — check back!');
+  });
+
+  /* Escape key closes any open modal */
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape'){
+      dobModal.classList.remove('open');
+      certModal.classList.remove('open');
+      profileModal.classList.remove('open');
+    }
+  });
+})();
+</script>
+</body>
+</html>

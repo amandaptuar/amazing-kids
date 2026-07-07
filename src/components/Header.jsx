@@ -8,7 +8,7 @@ import { logoutUser } from '../services/authAPI';
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, role, profile } = useAuth();
+  const { user, role, profile, loading } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -141,7 +141,9 @@ const Header = () => {
           </ul>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {user ? (
+            {loading ? (
+              <div style={{ width: '150px', height: '35px', backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '4px', animation: 'pulse 1.5s infinite' }}></div>
+            ) : user ? (
               <>
                 <Link to={role === 'admin' ? '/admin' : `/dashboard/${role}`} className="btn" style={{ padding: '8px 15px', fontSize: '13px', fontWeight: 'bold', backgroundColor: 'var(--primary-dark)', color: 'white', border: 'none', borderRadius: '4px', textDecoration: 'none' }}>Profile</Link>
                 <button onClick={handleLogout} className="btn" style={{ padding: '8px 15px', fontSize: '13px', fontWeight: 'bold', backgroundColor: 'transparent', color: 'var(--text-dark)', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '4px', cursor: 'pointer' }}>Logout</button>
@@ -199,7 +201,9 @@ const Header = () => {
               ))}
               
               <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {user ? (
+                {loading ? (
+                   <div style={{ width: '100%', height: '40px', backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '4px', animation: 'pulse 1.5s infinite' }}></div>
+                ) : user ? (
                   <>
                     <Link to={role === 'admin' ? '/admin' : `/dashboard/${role}`} onClick={() => setMobileMenuOpen(false)} className="btn" style={{ textAlign: 'center', width: '100%', textDecoration: 'none' }}>Profile</Link>
                     <button onClick={() => { handleLogout(); setMobileMenuOpen(false); }} className="btn" style={{ backgroundColor: '#e2e8f0', color: 'var(--text-dark)', width: '100%' }}>Logout</button>
@@ -221,6 +225,11 @@ const Header = () => {
         @media (max-width: 992px) {
           .desktop-nav { display: none !important; }
           .mobile-toggle { display: block !important; }
+        }
+        @keyframes pulse {
+          0% { opacity: 1; }
+          50% { opacity: 0.5; }
+          100% { opacity: 1; }
         }
       `}</style>
     </motion.header>

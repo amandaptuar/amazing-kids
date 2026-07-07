@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Trophy, Medal, Star, Flame, Crown } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Trophy, Medal, Star, Flame, Crown, Building, Users } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Leaderboard = () => {
   const [leaders, setLeaders] = useState([]);
+  const [schoolLeaders, setSchoolLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('students'); // 'students' or 'schools'
 
   useEffect(() => {
     fetchLeaderboard();
@@ -29,8 +31,44 @@ const Leaderboard = () => {
         .limit(50);
 
       if (!error && data) {
-        // Filter out those with 0 or null points just to keep it clean, or keep them if you want
         setLeaders(data.filter(s => s.points > 0));
+      }
+
+      // Fetch all students to aggregate school points
+      const { data: allStudentsData, error: schoolErr } = await supabase
+        .from('students')
+        .select(`
+          points,
+          school_id,
+          schools ( id, school_name, district, state )
+        `)
+        .not('school_id', 'is', null);
+        
+      if (!schoolErr && allStudentsData) {
+        const schoolPoints = {};
+        allStudentsData.forEach(student => {
+          if (!student.schools || !student.points) return;
+          const sId = student.schools.id;
+          if (!schoolPoints[sId]) {
+            schoolPoints[sId] = {
+               id: sId,
+               name: student.schools.school_name,
+               district: student.schools.district,
+               state: student.schools.state,
+               points: 0,
+               studentCount: 0
+            };
+          }
+          schoolPoints[sId].points += student.points;
+          schoolPoints[sId].studentCount += 1;
+        });
+        
+        const sortedSchools = Object.values(schoolPoints)
+          .filter(s => s.points > 0)
+          .sort((a, b) => b.points - a.points)
+          .slice(0, 50);
+          
+        setSchoolLeaders(sortedSchools);
       }
     } catch (err) {
       console.error(err);
@@ -63,6 +101,50 @@ const Leaderboard = () => {
           </motion.div>
         </div>
 
+        {/* Tab Selection */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '30px', gap: '15px' }}>
+          <button 
+            onClick={() => setActiveTab('students')}
+            style={{ 
+              padding: '12px 30px', 
+              borderRadius: '50px', 
+              border: 'none', 
+              fontSize: '16px', 
+              fontWeight: 'bold', 
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              backgroundColor: activeTab === 'students' ? 'var(--primary-blue)' : 'white',
+              color: activeTab === 'students' ? 'white' : '#64748b',
+              boxShadow: activeTab === 'students' ? '0 10px 20px rgba(59, 130, 246, 0.3)' : '0 4px 10px rgba(0,0,0,0.05)',
+              transition: 'all 0.3s'
+            }}
+          >
+            <Users size={18} /> Top Students
+          </button>
+          <button 
+            onClick={() => setActiveTab('schools')}
+            style={{ 
+              padding: '12px 30px', 
+              borderRadius: '50px', 
+              border: 'none', 
+              fontSize: '16px', 
+              fontWeight: 'bold', 
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              backgroundColor: activeTab === 'schools' ? 'var(--accent-orange)' : 'white',
+              color: activeTab === 'schools' ? 'white' : '#64748b',
+              boxShadow: activeTab === 'schools' ? '0 10px 20px rgba(249, 115, 22, 0.3)' : '0 4px 10px rgba(0,0,0,0.05)',
+              transition: 'all 0.3s'
+            }}
+          >
+            <Building size={18} /> Top Schools
+          </button>
+        </div>
+
         {/* Leaderboard Table Area */}
         <div style={{ backgroundColor: 'white', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.05)', overflow: 'hidden', border: '1px solid #f1f5f9' }}>
           
@@ -86,7 +168,7 @@ const Leaderboard = () => {
             </div>
           ) : (
             <div style={{ padding: '20px' }}>
-              {leaders.map((student, index) => {
+              {activeTab === 'students' && leaders.map((student, index) => {
                 const style = getRankStyle(index);
                 return (
                   <motion.div 
@@ -129,6 +211,54 @@ const Leaderboard = () => {
                         {student.points.toLocaleString()}
                       </div>
                       <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Points</div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+
+              {activeTab === 'schools' && schoolLeaders.map((school, index) => {
+                const style = getRankStyle(index);
+                return (
+                  <motion.div 
+                    key={school.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      padding: '15px 20px', 
+                      backgroundColor: style.bg,
+                      borderRadius: '16px',
+                      marginBottom: '10px',
+                      border: index < 3 ? `1px solid ${style.color}40` : '1px solid transparent',
+                      transition: 'transform 0.2s, box-shadow 0.2s'
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 20px rgba(0,0,0,0.03)'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                  >
+                    
+                    <div style={{ width: '50px', textAlign: 'center', fontSize: '20px', fontWeight: 'bold', color: style.color, display: 'flex', justifyContent: 'center' }}>
+                      {style.icon ? style.icon : `#${index + 1}`}
+                    </div>
+                    
+                    <div style={{ marginLeft: '15px', display: 'flex', alignItems: 'center', gap: '15px', flex: 1 }}>
+                      <div style={{ width: '46px', height: '46px', borderRadius: '12px', backgroundColor: index < 3 ? style.color : '#f1f5f9', color: index < 3 ? 'white' : 'var(--text-dark)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '18px' }}>
+                        <Building size={24} />
+                      </div>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: 'var(--text-dark)' }}>{school.name}</h3>
+                        <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                          {school.district}, {school.state} • {school.studentCount} Students
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--primary-dark)', fontFamily: 'monospace' }}>
+                        {school.points.toLocaleString()}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Total Points</div>
                     </div>
                   </motion.div>
                 );

@@ -5,6 +5,7 @@ import { Building, MapPin, Phone, Mail, Lock, ArrowRight, User, ChevronDown } fr
 import { motion } from 'framer-motion';
 import * as india from '../lib/indiaData';
 import Swal from 'sweetalert2';
+import emailjs from '@emailjs/browser';
 
 const RegisterSchool = () => {
   const [formData, setFormData] = useState({
@@ -19,9 +20,41 @@ const RegisterSchool = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Strong Password Validation
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      Swal.fire({
+        title: 'Weak Password',
+        text: 'Password must be at least 8 characters long and include at least one letter, one number, and one special character.',
+        icon: 'warning',
+        confirmButtonColor: '#ef4444'
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       await registerSchool(formData);
+
+      // Send Welcome Email via EmailJS
+      try {
+        await emailjs.send(
+          'service_chhvd7x', 
+          'template_y84feq3',
+          {
+            school_name: formData.schoolName,
+            principal_name: formData.principalName,
+            email: formData.email,
+            password: formData.password
+          },
+          'w1_bsQnbIzah00g7n'
+        );
+        console.log('School welcome email sent successfully!');
+      } catch (emailError) {
+        console.error('Failed to send school welcome email:', emailError);
+      }
+
       window.location.href = '/dashboard/school';
     } catch (error) {
       Swal.fire({

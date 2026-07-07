@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Navigate, Link } from 'react-router-dom';
-import { Trophy, Medal, Star, Target, MapPin, Calendar, Activity, ArrowRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { motion, AnimatePresence } from 'framer-motion';
 import Swal from 'sweetalert2';
+import './dashboard.css';
 
 const StudentDashboard = () => {
   const { role, profile, loading } = useAuth();
@@ -12,144 +11,112 @@ const StudentDashboard = () => {
   const [myEvents, setMyEvents] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [bestRank, setBestRank] = useState({ air: '--', state: '--', district: '--' });
-  const [isBirthday, setIsBirthday] = useState(false);
-  const [showBirthdayModal, setShowBirthdayModal] = useState(false);
   const [points, setPoints] = useState(0);
-  const [redeemingId, setRedeemingId] = useState(null);
+  const [studentData, setStudentData] = useState(null);
 
-  const goodies = [
-    { id: 1, name: 'Amazing Kids Cap', cost: 1000, icon: '🧢', color: '#f59e0b', desc: 'Premium cotton cap' },
-    { id: 2, name: 'Sports Sipper', cost: 1500, icon: '🥤', color: '#3b82f6', desc: '750ml leak-proof bottle' },
-    { id: 3, name: 'Champion T-Shirt', cost: 3000, icon: '👕', color: '#10b981', desc: 'Breathable dry-fit tee' },
-    { id: 4, name: 'Smart Fitness Band', cost: 8000, icon: '⌚', color: '#8b5cf6', desc: 'Track your activity' }
-  ];
+  // Modal States
+  const [showDobModal, setShowDobModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
-  const handleRedeem = async (goodie) => {
-    if (points < goodie.cost) {
-      Swal.fire({
-        title: 'Insufficient Points',
-        text: `You need ${goodie.cost - points} more points to redeem the ${goodie.name}. Play arcade games or win tournaments to earn more!`,
-        icon: 'warning',
-        confirmButtonColor: '#3b82f6'
-      });
-      return;
-    }
-    
-    const result = await Swal.fire({
-      title: 'Confirm Redemption',
-      text: `Are you sure you want to spend ${goodie.cost} points on ${goodie.name}?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#10b981',
-      cancelButtonColor: '#ef4444',
-      confirmButtonText: 'Yes, redeem it!'
-    });
-
-    if (result.isConfirmed) {
-      setRedeemingId(goodie.id);
-      try {
-        const newPoints = points - goodie.cost;
-        const { error } = await supabase.from('students').update({ points: newPoints }).eq('id', profile.id);
-        
-        if (error) throw error;
-        
-        setPoints(newPoints);
-        Swal.fire({
-          title: 'Success!',
-          text: `You have successfully redeemed the ${goodie.name}. It will be shipped to your registered address or school.`,
-          icon: 'success',
-          confirmButtonColor: '#10b981'
-        });
-      } catch (error) {
-        Swal.fire({
-          title: 'Error',
-          text: 'An error occurred while redeeming. Please try again later.',
-          icon: 'error',
-          confirmButtonColor: '#ef4444'
-        });
-      } finally {
-        setRedeemingId(null);
-      }
-    }
-  };
+  // Form States
+  const [dobInput, setDobInput] = useState('');
+  const [nameInput, setNameInput] = useState('');
+  const [addressInput, setAddressInput] = useState('');
+  const [dobError, setDobError] = useState(false);
+  const [profileError, setProfileError] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     if (role === 'student' && profile) {
       fetchStudentData();
+
+      // Realtime Subscriptions
+      const channel = supabase.channel('student-dashboard-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'performances', filter: `student_id=eq.${profile.id}` }, () => {
+          fetchStudentData();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'students', filter: `id=eq.${profile.id}` }, () => {
+          fetchStudentData();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'event_participants', filter: `student_id=eq.${profile.id}` }, () => {
+          fetchStudentData();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [role, profile]);
 
   const fetchStudentData = async () => {
     setDataLoading(true);
     try {
-      console.log("Fetching for profile ID:", profile.id);
-      
-      // 0. Fetch user points explicitly
-      const { data: userData } = await supabase.from('students').select('points, dob').eq('id', profile.id).single();
+      const { data: userData } = await supabase.from('students').select('*').eq('id', profile.id).single();
       if (userData) {
+        setStudentData(userData);
         setPoints(userData.points || 0);
-        // Check birthday
-        if (userData.dob) {
-          const dobDate = new Date(userData.dob);
-          const today = new Date();
-          if (dobDate.getMonth() === today.getMonth() && dobDate.getDate() === today.getDate()) {
-            setIsBirthday(true);
-            setShowBirthdayModal(true);
-          }
+        setDobInput(userData.dob || '');
+        setNameInput(userData.full_name || '');
+        
+        let loc = '';
+        if (userData.district && userData.state) {
+          loc = `${userData.district}, ${userData.state}`;
+        } else {
+          loc = userData.address || '';
         }
+        setAddressInput(loc);
       }
 
-      // 1. Fetch Registrations
-      const { data: registrations, error: regError } = await supabase
-        .from('event_participants')
-        .select('*')
-        .eq('student_id', profile.id);
+      const { data: registrations } = await supabase.from('event_participants').select('*').eq('student_id', profile.id);
+      const { data: allEvents } = await supabase.from('events').select('*');
+      const { data: ranks } = await supabase.from('rankings').select('*').eq('student_id', profile.id);
+      const { data: perf } = await supabase.from('performances').select('*').eq('student_id', profile.id);
 
-      // 2. Fetch Events manually
-      const { data: allEvents, error: eventsError } = await supabase
-        .from('events')
-        .select('*');
-
-      // 3. Fetch Rankings manually
-      const { data: ranks, error: ranksError } = await supabase
-        .from('rankings')
-        .select('*')
-        .eq('student_id', profile.id);
-
-      // Combine them in JS to prevent any Supabase inner join failures
       let highestAir = Infinity;
       let highestState = Infinity;
       let highestDistrict = Infinity;
 
-      const combinedEvents = (registrations || []).map(reg => {
-        const eventData = allEvents?.find(e => e.id === reg.event_id) || {};
-        const rankInfo = ranks?.find(r => r.event_id === reg.event_id);
+      // Combine unique event IDs from both registrations and performances
+      const eventIds = new Set([
+        ...(registrations || []).map(r => r.event_id),
+        ...(perf || []).map(p => p.event_id)
+      ]);
+
+      const combinedEvents = Array.from(eventIds).map(eventId => {
+        const reg = registrations?.find(r => r.event_id === eventId) || { event_id: eventId, registration_date: new Date().toISOString() };
+        const eventData = allEvents?.find(e => e.id === eventId) || {};
+        const perfInfo = perf?.find(p => p.event_id === eventId);
+        const rankInfo = ranks?.find(r => r.event_id === eventId);
         
-        if (rankInfo) {
-          if (rankInfo.air_rank < highestAir) highestAir = rankInfo.air_rank;
-          if (rankInfo.state_rank < highestState) highestState = rankInfo.state_rank;
-          if (rankInfo.district_rank < highestDistrict) highestDistrict = rankInfo.district_rank;
-        }
+        // Use rankings table for ranks, fallback to performances table if not found
+        const combinedRank = {
+          national_rank: rankInfo?.air_rank ?? rankInfo?.national_rank ?? perfInfo?.national_rank,
+          state_rank: rankInfo?.state_rank ?? perfInfo?.state_rank,
+          district_rank: rankInfo?.district_rank ?? perfInfo?.district_rank,
+          metric_value: perfInfo?.metric_value ?? rankInfo?.metric_value
+        };
+
+        if (combinedRank.national_rank != null && combinedRank.national_rank < highestAir) highestAir = combinedRank.national_rank;
+        if (combinedRank.state_rank != null && combinedRank.state_rank < highestState) highestState = combinedRank.state_rank;
+        if (combinedRank.district_rank != null && combinedRank.district_rank < highestDistrict) highestDistrict = combinedRank.district_rank;
 
         return {
           ...reg,
           events: eventData,
-          rank: rankInfo || null
+          rank: (perfInfo || rankInfo) ? combinedRank : null
         };
       });
 
-      // Sort by registration date descending
       combinedEvents.sort((a, b) => new Date(b.registration_date) - new Date(a.registration_date));
-
       setMyEvents(combinedEvents);
 
-      if (highestAir !== Infinity) {
-        setBestRank({
-          air: highestAir,
-          state: highestState,
-          district: highestDistrict
-        });
-      }
+      setBestRank({
+        air: highestAir !== Infinity ? highestAir : '--',
+        state: highestState !== Infinity ? highestState : '--',
+        district: highestDistrict !== Infinity ? highestDistrict : '--'
+      });
 
     } catch (err) {
       console.error(err);
@@ -158,209 +125,432 @@ const StudentDashboard = () => {
     }
   };
 
-  if (loading) return <div style={{ paddingTop: '100px', textAlign: 'center' }}>Loading...</div>;
-  if (role !== 'student' || !profile) {
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  const handleSaveDob = async () => {
+    if (!dobInput) {
+      setDobError(true);
+      return;
+    }
+    setDobError(false);
+    try {
+      const { error } = await supabase.from('students').update({ dob: dobInput }).eq('id', profile.id);
+      if (error) throw error;
+      setStudentData(prev => ({ ...prev, dob: dobInput }));
+      setShowDobModal(false);
+      showToast('Date of birth updated');
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', 'Failed to update DOB', 'error');
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!nameInput || !addressInput) {
+      setProfileError(true);
+      return;
+    }
+    setProfileError(false);
+    
+    // Parse address back to district and state if possible
+    let district = '';
+    let state = '';
+    const parts = addressInput.split(',').map(p => p.trim());
+    if (parts.length >= 2) {
+      district = parts[0];
+      state = parts[1];
+    }
+
+    try {
+      const updates = { full_name: nameInput };
+      if (district && state) {
+        updates.district = district;
+        updates.state = state;
+      } else {
+        updates.address = addressInput;
+      }
+
+      const { error } = await supabase.from('students').update(updates).eq('id', profile.id);
+      if (error) throw error;
+      
+      setStudentData(prev => ({ ...prev, ...updates }));
+      setShowProfileModal(false);
+      showToast('Profile details updated');
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', 'Failed to update profile', 'error');
+    }
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Quick validation
+    if (file.size > 2 * 1024 * 1024) {
+      Swal.fire('File Too Large', 'Please upload an image smaller than 2MB', 'warning');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `profile-pics/${profile.id}-${Date.now()}.${fileExt}`;
+      
+      // Upload to 'certificates' bucket (which we know exists) inside a profile-pics folder
+      const { error: uploadError } = await supabase.storage
+        .from('certificates')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('certificates')
+        .getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from('students')
+        .update({ photo_url: publicUrl })
+        .eq('id', profile.id);
+
+      if (updateError) throw updateError;
+
+      setStudentData(prev => ({ ...prev, photo_url: publicUrl }));
+      showToast('Profile picture updated successfully!');
+    } catch (err) {
+      console.error('Avatar upload error:', err);
+      Swal.fire('Upload Failed', 'There was an error uploading your picture. Make sure the storage bucket is properly configured.', 'error');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  // Helpers
+  const calcAge = (dobIso) => {
+    if (!dobIso) return '—';
+    const dob = new Date(dobIso + "T00:00:00");
+    const now = new Date();
+    let age = now.getFullYear() - dob.getFullYear();
+    const m = now.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;
+    return age;
+  };
+
+  const formatDate = (iso) => {
+    if (!iso) return 'Not set';
+    const d = new Date(iso + "T00:00:00");
+    if (isNaN(d.getTime())) return iso; // fallback
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  const initials = (name) => {
+    if (!name) return 'ST';
+    return name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  };
+
+  const tierFor = (rank) => {
+    if (rank === 1) return { name: "gold", color: "#E7B740", deep: "#B5872A" };
+    if (rank === 2) return { name: "silver", color: "#B8C2D6", deep: "#7E8AA6" };
+    if (rank === 3) return { name: "bronze", color: "#C9834E", deep: "#96562C" };
+    return { name: "steel", color: "#E3E1D8", deep: "#5B6480" };
+  };
+
+  const tierLabel = (rank) => {
+    if (rank === 1) return "Top rank";
+    if (rank === 2) return "Runner-up";
+    if (rank === 3) return "Podium finish";
+    return "Ranked";
+  };
+
+  const MedalSVG = ({ rank, size = 56 }) => {
+    const t = tierFor(rank);
     return (
-      <div style={{ paddingTop: '120px', textAlign: 'center', minHeight: '100vh', backgroundColor: 'var(--bg-light)' }}>
-        <h2 style={{ color: '#ef4444' }}>Unauthorized Access</h2>
-        <p>You must be logged in as a registered Student to view this page.</p>
-        <Link to="/login" style={{ color: 'var(--primary-blue)', fontWeight: 'bold' }}>Login Here</Link>
+      <svg className="medal-svg" width={size} height={size} viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 30 L11 50 L20 47 L25 54 L33 36" fill={t.color} opacity="0.55" />
+        <path d="M36 30 L45 50 L36 47 L31 54 L23 36" fill={t.color} opacity="0.35" />
+        <circle cx="28" cy="24" r="18" fill={t.color} />
+        <circle cx="28" cy="24" r="18" fill="none" stroke={t.deep} strokeWidth="2" />
+        <text x="28" y="30" textAnchor="middle" fontFamily="Space Grotesk, sans-serif" fontWeight="700" fontSize="16" fill="#16203B">#{rank}</text>
+      </svg>
+    );
+  };
+
+  if (loading || dataLoading) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#F7F6F2', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ width: '60px', height: '60px', border: '5px solid #E3E1D8', borderTopColor: '#E7B740', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '20px' }}></div>
+        <h2 style={{ fontFamily: '"Space Grotesk", sans-serif', color: '#16203B', margin: 0, fontSize: '24px' }}>Loading Dashboard...</h2>
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
+  if (role !== 'student' || !profile) {
+    return <Navigate to="/login" />;
+  }
+
+  const displayName = studentData?.full_name || profile.full_name;
+  let displayLoc = '';
+  if (studentData?.district && studentData?.state) {
+    displayLoc = `${studentData.district}, ${studentData.state}`;
+  } else {
+    displayLoc = studentData?.address || `${profile.district}, ${profile.state}`;
+  }
+
+  const personalBest = [
+    { scope: "All India Rank", rank: bestRank.air },
+    { scope: "State Rank", rank: bestRank.state },
+    { scope: "District Rank", rank: bestRank.district }
+  ];
+
   return (
-    <div style={{ paddingTop: '80px', backgroundColor: 'var(--bg-light)', minHeight: '100vh', fontFamily: 'var(--font-body)' }}>
-      
-      {/* Student Profile Header */}
-      <div style={{ backgroundColor: 'white', padding: '40px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-        <div className="container" style={{ display: 'flex', alignItems: 'center', gap: '30px' }}>
-          <div style={{ position: 'relative' }}>
-            <img 
-              src={profile.photo_url || "https://randomuser.me/api/portraits/lego/1.jpg"} 
-              alt="Student Profile" 
-              style={{ width: '120px', height: '120px', borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--primary-light)', boxShadow: '0 10px 20px rgba(0,0,0,0.05)' }} 
-            />
-            {bestRank.air === 1 && (
-              <div style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: '#fbbf24', padding: '8px', borderRadius: '50%', border: '3px solid white' }}>
-                <Trophy size={20} style={{ color: 'white' }} />
-              </div>
-            )}
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '5px' }}>
-              <h1 style={{ fontFamily: 'var(--font-heading)', margin: 0, fontSize: '32px', color: 'var(--text-dark)' }}>{profile.full_name}</h1>
-              <span style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary-blue)', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>Student Account</span>
-            </div>
-            <p style={{ margin: '0 0 10px 0', color: 'var(--primary-blue)', fontWeight: 'bold' }}>ID: {profile.custom_student_id}</p>
-            <div style={{ display: 'flex', gap: '20px', fontSize: '14px', color: 'var(--text-light)' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><MapPin size={16}/> {profile.district}, {profile.state}</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Target size={16}/> {profile.schools?.school_name || 'Independent Participant'}</span>
+    <div className="dashboard-wrapper">
+      <div className="topbar">
+        <div className="topbar-inner">
+          <div className="brand">
+            <div className="brand-mark">AK</div>
+            <div>
+              Student Dashboard
+              <span className="brand-sub">AKI Talent Program</span>
             </div>
           </div>
-          
-          <div style={{ textAlign: 'center', backgroundColor: '#fffbeb', padding: '15px 25px', borderRadius: '16px', border: '1px solid #fde68a', boxShadow: '0 10px 20px rgba(251,191,36,0.1)' }}>
-            <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#b45309', fontWeight: 'bold', letterSpacing: '1px' }}>Global Points</div>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#fbbf24', fontFamily: 'monospace' }}>{points.toLocaleString()}</div>
-            <Link to="/store" style={{ display: 'inline-block', marginTop: '5px', fontSize: '12px', color: 'var(--primary-blue)', textDecoration: 'none', fontWeight: 'bold' }}>Shop Goodies &rarr;</Link>
+          <div className="topbar-actions">
+            <div className="points-pill">
+              <span className="dot"></span>
+              <span className="label">Points</span>
+              <span>{points}</span>
+            </div>
+            <Link to="/store" className="btn-shop">
+              Shop Goodies
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            </Link>
           </div>
         </div>
       </div>
 
-      <div className="container" style={{ padding: '40px 0' }}>
-        
-        {/* Global Rankings Overview */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '20px' }}>
-          <div>
-            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '24px', margin: '0 0 5px 0' }}>Personal Best Ranks</h2>
-            <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>Your highest achievements across all participated events.</p>
+      <div className="hero-band"></div>
+
+      <div className="shell" style={{ marginTop: 0 }}>
+        {/* PROFILE CARD */}
+        <div className="profile-card">
+          <div className="avatar" style={{ position: 'relative', overflow: 'hidden', cursor: 'pointer' }} onClick={() => document.getElementById('avatarUpload').click()}>
+            {uploadingAvatar ? (
+              <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#e2e8f0' }}>
+                 <div style={{ width: '30px', height: '30px', border: '3px solid #cbd5e1', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+              </div>
+            ) : studentData?.photo_url ? (
+              <>
+                <img src={studentData.photo_url} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div className="avatar-overlay" style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', opacity: 0, transition: 'opacity 0.2s' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="32" height="32"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                </div>
+              </>
+            ) : (
+              <>
+                {initials(displayName)}
+                <div className="avatar-overlay" style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', opacity: 0, transition: 'opacity 0.2s' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="32" height="32"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                </div>
+              </>
+            )}
+            <input type="file" id="avatarUpload" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
+            <style>{`.avatar:hover .avatar-overlay { opacity: 1 !important; }`}</style>
+          </div>
+
+          <div className="profile-id-block">
+            <div className="profile-name-row">
+              <div className="profile-name">{displayName}</div>
+              <button className="btn-edit-inline" aria-label="Update name and address" onClick={() => setShowProfileModal(true)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z" /></svg>
+              </button>
+            </div>
+            <div className="profile-meta-row">
+              <span className="id-chip">{profile.custom_student_id}</span>
+              <span className="meta-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z" /><circle cx="12" cy="9" r="2.5" /></svg>
+                <span>{displayLoc}</span>
+              </span>
+              <span className="meta-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 22V6a2 2 0 012-2h12a2 2 0 012 2v16M4 22h16M9 22V9h6v13" /></svg>
+                {studentData?.parent_name || 'Student Account'}
+              </span>
+            </div>
+          </div>
+
+          <div className="dob-block">
+            <div className="dob-stat">
+              <span className="label">Date of birth</span>
+              <span className="value">{formatDate(studentData?.dob)}</span>
+            </div>
+            <div className="age-badge">
+              <span className="num">{calcAge(studentData?.dob)}</span>
+              <span className="txt">Years</span>
+            </div>
+            <button className="btn-edit-dob" aria-label="Update date of birth" onClick={() => setShowDobModal(true)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z" /></svg>
+            </button>
           </div>
         </div>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '50px' }}>
-          <motion.div whileHover={{ y: -5 }} style={{ backgroundColor: 'var(--primary-dark)', color: 'white', padding: '25px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(15, 23, 42, 0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <p style={{ margin: '0 0 5px 0', fontSize: '12px', textTransform: 'uppercase', fontWeight: 'bold', color: 'var(--accent-orange)', letterSpacing: '1px' }}>All India Rank</p>
-              <h3 style={{ margin: 0, fontSize: '36px', fontFamily: 'var(--font-heading)' }}>#{bestRank.air}</h3>
-            </div>
-            <Trophy size={48} style={{ opacity: 0.2 }} />
-          </motion.div>
-          
-          <motion.div whileHover={{ y: -5 }} style={{ backgroundColor: '#10b981', color: 'white', padding: '25px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(16, 185, 129, 0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <p style={{ margin: '0 0 5px 0', fontSize: '12px', textTransform: 'uppercase', fontWeight: 'bold', color: 'rgba(255,255,255,0.7)', letterSpacing: '1px' }}>State Rank</p>
-              <h3 style={{ margin: 0, fontSize: '36px', fontFamily: 'var(--font-heading)' }}>#{bestRank.state}</h3>
-            </div>
-            <Medal size={48} style={{ opacity: 0.2 }} />
-          </motion.div>
 
-          <motion.div whileHover={{ y: -5 }} style={{ backgroundColor: '#f59e0b', color: 'white', padding: '25px', borderRadius: '16px', boxShadow: '0 10px 30px rgba(245, 158, 11, 0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <p style={{ margin: '0 0 5px 0', fontSize: '12px', textTransform: 'uppercase', fontWeight: 'bold', color: 'rgba(255,255,255,0.7)', letterSpacing: '1px' }}>District Rank</p>
-              <h3 style={{ margin: 0, fontSize: '36px', fontFamily: 'var(--font-heading)' }}>#{bestRank.district}</h3>
+        {/* PERSONAL BEST RANKS */}
+        <div className="section-heading">
+          <h2>Personal Best Ranks</h2>
+          <p>Your highest achievements across all participated events.</p>
+        </div>
+        <div className="ranks-row">
+          {personalBest.map((r, i) => (
+            <div className="rank-card" key={i}>
+              {r.rank !== '--' ? <MedalSVG rank={r.rank} /> : (
+                <div style={{ width: 56, height: 56, borderRadius: '50%', backgroundColor: '#E3E1D8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 'bold', color: '#5B6480' }}>--</div>
+              )}
+              <div className="rank-info">
+                <div className="scope">{r.scope}</div>
+                <div className="rank-num">#{r.rank}</div>
+                <div className="rank-tier" style={{ color: tierFor(r.rank !== '--' ? r.rank : null).deep }}>
+                  {r.rank !== '--' ? tierLabel(r.rank) : 'Not Ranked'}
+                </div>
+              </div>
             </div>
-            <Star size={48} style={{ opacity: 0.2 }} />
-          </motion.div>
+          ))}
         </div>
 
-        {/* Participated Events */}
-        <div style={{ backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', overflow: 'hidden' }}>
-          <div style={{ padding: '25px 30px', borderBottom: '1px solid rgba(0,0,0,0.05)', backgroundColor: '#fafafa' }}>
-            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '20px', margin: 0, color: 'var(--text-dark)' }}>My Competitions & Live Ranks</h2>
-          </div>
-          
-          {dataLoading ? (
-            <div style={{ padding: '50px', textAlign: 'center', color: '#64748b' }}>Syncing your records...</div>
-          ) : myEvents.length === 0 ? (
-            <div style={{ padding: '60px 30px', textAlign: 'center' }}>
-              <Calendar size={48} style={{ color: '#cbd5e1', margin: '0 auto 15px auto' }} />
-              <h3 style={{ fontSize: '18px', color: 'var(--text-dark)', margin: '0 0 10px 0' }}>No Events Yet</h3>
-              <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px' }}>You haven't participated in any events yet.</p>
-              <Link to="/events" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', backgroundColor: 'var(--primary-blue)', color: 'white', borderRadius: '8px', textDecoration: 'none', fontWeight: 'bold' }}>
-                Browse Upcoming Events <ArrowRight size={16} />
-              </Link>
+        {/* COMPETITIONS */}
+        <div className="section-heading">
+          <h2>My Competitions & Live Ranks</h2>
+          <p>Every event you've entered, and how it's scored.</p>
+        </div>
+
+        <div className="competitions-wrap">
+          {myEvents.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-dim)' }}>
+              No competitions yet. Join an event to see your ranks here!
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <div style={{ overflowX: 'auto', width: '100%' }}><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '700px' }}>
+            <>
+              <table>
                 <thead>
-                  <tr style={{ backgroundColor: 'white', color: '#94a3b8', fontSize: '12px', textTransform: 'uppercase' }}>
-                    <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Competition Details</th>
-                    <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>Performance Score</th>
-                    <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>All India Rank</th>
-                    <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9' }}>State Rank</th>
-                    <th style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>Certificate</th>
+                  <tr>
+                    <th>Competition Details</th>
+                    <th>Performance Score</th>
+                    <th>All India Rank</th>
+                    <th>State Rank</th>
+                    <th>Certificate</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {myEvents.map((event) => (
-                    <tr key={event.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '20px 30px' }}>
-                        <div style={{ fontWeight: 'bold', color: 'var(--text-dark)', fontSize: '15px' }}>{event.events?.name || 'Unknown Event'}</div>
-                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px', textTransform: 'capitalize' }}>
-                          {event.events?.sport_category || 'General'} • {event.events ? new Date(event.events.event_date).toLocaleDateString() : 'N/A'}
-                        </div>
+                  {myEvents.map((c, i) => (
+                    <tr key={i}>
+                      <td>
+                        <div className="comp-name">{c.events?.name || 'Unknown Event'}</div>
+                        <div className="comp-sub">{c.events?.sport_category || 'General'} • {formatDate(c.events?.event_date?.split('T')[0])}</div>
                       </td>
-                      <td style={{ padding: '20px 30px' }}>
-                        {event.rank ? (
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: '#eff6ff', padding: '6px 12px', borderRadius: '8px', color: 'var(--primary-blue)', fontWeight: 'bold' }}>
-                            <Activity size={16} /> {event.rank.metric_value}
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: '13px', color: '#94a3b8', backgroundColor: '#f8fafc', padding: '6px 12px', borderRadius: '8px' }}>Pending Evaluation</span>
-                        )}
+                      <td>
+                        {c.rank ? <span className="score-value">{c.rank.metric_value} {c.events?.event_type}</span> : <span style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>Pending</span>}
                       </td>
-                      <td style={{ padding: '20px 30px' }}>
-                        {event.rank ? (
-                          <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-orange)' }}>#{event.rank.air_rank}</span>
-                        ) : (
-                          <span style={{ color: '#cbd5e1' }}>--</span>
-                        )}
+                      <td>
+                        {c.rank?.national_rank ? (
+                          <span className="rank-chip">
+                            <span className="swatch" style={{ background: tierFor(c.rank.national_rank).color }}></span>
+                            #{c.rank.national_rank}
+                          </span>
+                        ) : '--'}
                       </td>
-                      <td style={{ padding: '20px 30px' }}>
-                        {event.rank ? (
-                          <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#10b981' }}>#{event.rank.state_rank}</span>
-                        ) : (
-                          <span style={{ color: '#cbd5e1' }}>--</span>
-                        )}
+                      <td>
+                        {c.rank?.state_rank ? (
+                          <span className="rank-chip">
+                            <span className="swatch" style={{ background: tierFor(c.rank.state_rank).color }}></span>
+                            #{c.rank.state_rank}
+                          </span>
+                        ) : '--'}
                       </td>
-                      <td style={{ padding: '20px 30px', textAlign: 'right' }}>
-                        {event.rank ? (
-                          <Link 
-                            to={`/certificate/${event.event_id}/${profile.id}`} 
-                            style={{ padding: '8px 16px', backgroundColor: '#eff6ff', color: 'var(--primary-blue)', border: '1px solid #bfdbfe', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', textDecoration: 'none', display: 'inline-block', transition: 'all 0.2s' }}
-                            onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-blue)'; e.currentTarget.style.color = 'white'; }}
-                            onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; e.currentTarget.style.color = 'var(--primary-blue)'; }}
-                          >
+                      <td>
+                        {c.rank ? (
+                          <Link to={`/certificate/${c.event_id}/${profile.id}`} className="btn-cert">
                             Download
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                           </Link>
                         ) : (
-                          <span style={{ fontSize: '12px', color: '#94a3b8' }}>Pending</span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Pending</span>
                         )}
                       </td>
                     </tr>
                   ))}
                 </tbody>
-              </table></div>
-            </div>
+              </table>
+              <div className="comp-cards">
+                {myEvents.map((c, i) => (
+                  <div className="comp-card" key={i}>
+                    <div className="comp-card-top">
+                      <div>
+                        <div className="comp-name">{c.events?.name}</div>
+                        <div className="comp-sub">{c.events?.sport_category}</div>
+                      </div>
+                      {c.rank && (
+                        <Link to={`/certificate/${c.event_id}/${profile.id}`} className="btn-cert">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                        </Link>
+                      )}
+                    </div>
+                    <div className="comp-card-stats">
+                      <div className="comp-stat">
+                        <div className="label">Score</div>
+                        <div className="val">{c.rank ? c.rank.metric_value : '--'}</div>
+                      </div>
+                      <div className="comp-stat">
+                        <div className="label">AIR</div>
+                        <div className="val">{c.rank?.national_rank ? `#${c.rank.national_rank}` : '--'}</div>
+                      </div>
+                      <div className="comp-stat">
+                        <div className="label">State</div>
+                        <div className="val">{c.rank?.state_rank ? `#${c.rank.state_rank}` : '--'}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
 
+        <footer className="foot-note">Data shown reflects your latest verified competition results.</footer>
       </div>
-      {/* Birthday Modal */}
-      <AnimatePresence>
-        {showBirthdayModal && (
-          <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}
-            onClick={() => setShowBirthdayModal(false)}
-          >
-            <motion.div 
-              initial={{ scale: 0.8, y: 50 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.8, y: 50 }}
-              style={{ backgroundColor: 'white', padding: '50px', borderRadius: '30px', textAlign: 'center', maxWidth: '500px', position: 'relative', overflow: 'hidden' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Confetti effect using framer motion divs for simplicity */}
-              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 10, ease: 'linear' }} style={{ width: '200px', height: '200px', position: 'absolute', top: '-100px', left: '-100px', background: 'radial-gradient(circle, rgba(251,191,36,0.3) 0%, rgba(255,255,255,0) 70%)' }} />
-              <motion.div animate={{ rotate: -360 }} transition={{ repeat: Infinity, duration: 10, ease: 'linear' }} style={{ width: '200px', height: '200px', position: 'absolute', bottom: '-100px', right: '-100px', background: 'radial-gradient(circle, rgba(16,185,129,0.3) 0%, rgba(255,255,255,0) 70%)' }} />
-              
-              <div style={{ fontSize: '64px', marginBottom: '10px' }}>🎂</div>
-              <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '36px', color: 'var(--primary-dark)', margin: '0 0 15px 0' }}>Happy Birthday!</h2>
-              <p style={{ color: '#64748b', fontSize: '18px', marginBottom: '30px' }}>
-                Wishing you a fantastic day filled with joy and success. Keep being amazing, <strong style={{color: 'var(--primary-blue)'}}>{profile.full_name}</strong>!
-              </p>
-              
-              <button 
-                onClick={() => setShowBirthdayModal(false)}
-                style={{ backgroundColor: 'var(--accent-orange)', color: 'white', border: 'none', padding: '12px 30px', fontSize: '16px', fontWeight: 'bold', borderRadius: '12px', cursor: 'pointer' }}
-              >
-                Thank You!
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
+      {/* DOB MODAL */}
+      <div className={`modal-overlay ${showDobModal ? 'open' : ''}`}>
+        <div className="modal">
+          <h3>Update date of birth</h3>
+          <p className="hint">This keeps your age accurate for age-group eligibility across competitions.</p>
+          <label className="field-label" htmlFor="dobInput">Date of birth</label>
+          <input type="date" id="dobInput" className="field-input" value={dobInput} onChange={e => setDobInput(e.target.value)} />
+          <div className={`field-error ${dobError ? 'show' : ''}`}>Please choose a valid date of birth.</div>
+          <div className="modal-actions">
+            <button className="btn-ghost" onClick={() => setShowDobModal(false)}>Cancel</button>
+            <button className="btn-primary" onClick={handleSaveDob}>Save changes</button>
+          </div>
+        </div>
+      </div>
+
+      {/* EDIT PROFILE MODAL */}
+      <div className={`modal-overlay ${showProfileModal ? 'open' : ''}`}>
+        <div className="modal">
+          <h3>Update profile details</h3>
+          <p className="hint">Keep your name and address current so certificates and mailers reach the right place.</p>
+          <label className="field-label" htmlFor="nameInput">Full name</label>
+          <input type="text" id="nameInput" className="field-input" style={{ marginBottom: 16 }} placeholder="e.g. Riya Kumari" value={nameInput} onChange={e => setNameInput(e.target.value)} />
+          <label className="field-label" htmlFor="addressInput">Address (city, state)</label>
+          <input type="text" id="addressInput" className="field-input" placeholder="e.g. Jalna, Maharashtra" value={addressInput} onChange={e => setAddressInput(e.target.value)} />
+          <div className={`field-error ${profileError ? 'show' : ''}`}>Please fill in both fields before saving.</div>
+          <div className="modal-actions">
+            <button className="btn-ghost" onClick={() => setShowProfileModal(false)}>Cancel</button>
+            <button className="btn-primary" onClick={handleSaveProfile}>Save changes</button>
+          </div>
+        </div>
+      </div>
+
+      <div className={`toast ${toastMessage ? 'show' : ''}`}>{toastMessage}</div>
     </div>
   );
 };

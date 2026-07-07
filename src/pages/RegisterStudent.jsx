@@ -31,6 +31,19 @@ const RegisterStudent = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Strong Password Validation
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      Swal.fire({
+        title: 'Weak Password',
+        text: 'Password must be at least 8 characters long and include at least one letter, one number, and one special character.',
+        icon: 'warning',
+        confirmButtonColor: '#3b82f6'
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       let photoUrl = null;
