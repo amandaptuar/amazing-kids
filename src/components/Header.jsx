@@ -30,20 +30,26 @@ const Header = () => {
 
   const navLinks = [
     { name: 'Home', href: '/' },
-    { name: 'About', href: '/about' },
+    { name: 'About Us', href: '/about' },
     { 
-      name: 'Programs', 
+      name: 'Program', 
       href: '#', 
       hasDropdown: true,
       dropdownItems: [
-        { name: 'Athlete', path: '/program/athlete' },
-        { name: 'High Jump', path: '/program/highjump' },
-        { name: 'Throw', path: '/program/throw' }
+        { name: '🏃 Athlete', path: '/program/athlete' },
+        { name: '⛸️ Skater', path: '/program/skater' },
+        { name: '🚴 Cyclist', path: '/program/cyclist' },
+        { name: '💃 Dancer', path: '/program/dancer' },
+        { name: '🎵 Musician', path: '/program/musician' },
+        { name: '🎨 Artist', path: '/program/artist' },
+        { name: '🏅 High Jump', path: '/program/highjump' },
+        { name: '🎯 Throw', path: '/program/throw' },
+        { name: '🏆 School Leaderboard', path: '/leaderboard' }
       ]
     },
-    { name: 'Events', href: '/events' },
+    { name: 'Event', href: '/events' },
     { name: 'Goodies Store', href: '/store' },
-    { name: 'Contact', href: '/contact' }
+    { name: 'Contact Us', href: '/contact' }
   ];
 
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -101,9 +107,11 @@ const Header = () => {
                       boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
                       borderRadius: '8px',
                       padding: '10px 0',
-                      minWidth: '200px',
-                      borderTop: '10px solid transparent', // Invisible bridge to prevent hover loss
-                      backgroundClip: 'padding-box', // Keeps the border transparent while the background is white
+                      minWidth: '220px',
+                      maxHeight: '380px',
+                      overflowY: 'auto',
+                      borderTop: '10px solid transparent',
+                      backgroundClip: 'padding-box',
                       display: 'flex',
                       flexDirection: 'column'
                     }}
@@ -152,7 +160,7 @@ const Header = () => {
               <>
                 <Link to="/login" className="btn" style={{ padding: '8px 15px', fontSize: '13px', fontWeight: 'bold', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '4px', textDecoration: 'none' }}>Login</Link>
                 <Link to="/register/school" className="btn" style={{ padding: '8px 15px', fontSize: '13px', fontWeight: 'bold', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', textDecoration: 'none' }}>School</Link>
-                <Link to="/register/student" className="btn" style={{ padding: '8px 15px', fontSize: '13px', fontWeight: 'bold', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', textDecoration: 'none' }}>Student</Link>
+                <Link to="/register/student" className="btn" style={{ padding: '8px 15px', fontSize: '13px', fontWeight: 'bold', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', textDecoration: 'none' }}>Register</Link>
               </>
             )}
           </div>
@@ -211,8 +219,8 @@ const Header = () => {
                 ) : (
                   <>
                     <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="btn" style={{ backgroundColor: '#10b981', textAlign: 'center', width: '100%', textDecoration: 'none' }}>Login</Link>
-                    <Link to="/register/student" onClick={() => setMobileMenuOpen(false)} className="btn" style={{ backgroundColor: '#3b82f6', textAlign: 'center', width: '100%', textDecoration: 'none' }}>Register Student</Link>
-                    <Link to="/register/school" onClick={() => setMobileMenuOpen(false)} className="btn" style={{ backgroundColor: '#ef4444', textAlign: 'center', width: '100%', textDecoration: 'none' }}>Register School</Link>
+                    <Link to="/register/school" onClick={() => setMobileMenuOpen(false)} className="btn" style={{ backgroundColor: '#ef4444', textAlign: 'center', width: '100%', textDecoration: 'none' }}>School</Link>
+                    <Link to="/register/student" onClick={() => setMobileMenuOpen(false)} className="btn" style={{ backgroundColor: '#3b82f6', textAlign: 'center', width: '100%', textDecoration: 'none' }}>Register</Link>
                   </>
                 )}
               </div>

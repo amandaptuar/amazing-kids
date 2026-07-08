@@ -2,16 +2,28 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Trophy, Medal, Star, Flame, Crown, Building, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 
 const Leaderboard = () => {
   const [leaders, setLeaders] = useState([]);
   const [schoolLeaders, setSchoolLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('students'); // 'students' or 'schools'
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('tab') === 'schools' ? 'schools' : 'students';
+  });
 
   useEffect(() => {
     fetchLeaderboard();
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('tab') === 'schools') {
+      setActiveTab('schools');
+    }
+  }, [location.search]);
 
   const fetchLeaderboard = async () => {
     setLoading(true);

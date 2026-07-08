@@ -69,7 +69,6 @@ const AdminDashboard = () => {
 
     // Fetch Schools Data
     const { data: schoolsData } = await supabase.from('schools').select('*').order('created_at', { ascending: false });
-    if (schoolsData) setSchools(schoolsData);
 
     // Fetch Events Data
     const { data: eventsData } = await supabase.from('events').select('*').order('created_at', { ascending: false });
@@ -82,6 +81,28 @@ const AdminDashboard = () => {
       // Generate Leaderboard
       const sortedStudents = [...studentsData].filter(s => s.points > 0).sort((a, b) => b.points - a.points);
       setLeaderboard(sortedStudents);
+      
+      if (schoolsData) {
+        const schoolsWithPoints = schoolsData.map(school => {
+          const schoolStudents = studentsData.filter(s => s.school_id === school.id);
+          const totalPoints = schoolStudents.reduce((sum, s) => sum + (s.points || 0), 0);
+          return { ...school, totalPoints };
+        });
+        
+        schoolsWithPoints.sort((a, b) => b.totalPoints - a.totalPoints);
+        
+        let currentRank = 1;
+        schoolsWithPoints.forEach((s, idx) => {
+          if (idx > 0 && s.totalPoints < schoolsWithPoints[idx-1].totalPoints) {
+              currentRank = idx + 1;
+          }
+          s.rank = s.totalPoints > 0 ? currentRank : '-';
+        });
+        
+        setSchools(schoolsWithPoints);
+      }
+    } else if (schoolsData) {
+      setSchools(schoolsData);
     }
     
     setDataLoading(false);
@@ -288,13 +309,44 @@ const AdminDashboard = () => {
   };
 
 
-  if (loading || isInitialLoad) {
+  if (loading || (role === 'admin' && isInitialLoad)) {
     return (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-        <div style={{ width: '60px', height: '60px', border: '5px solid #e2e8f0', borderTopColor: '#0f172a', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '20px' }}></div>
-        <h2 style={{ fontFamily: 'var(--font-heading)', color: 'var(--primary-dark)', margin: 0, fontSize: '24px' }}>Loading Admin Center...</h2>
-        <p style={{ color: '#64748b', fontSize: '15px', marginTop: '10px' }}>Fetching secure platform data</p>
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      <div id="naspe-loader" style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffffff' }}>
+        <div className="loader-stage">
+          <div className="track-ring">
+            <svg viewBox="0 0 220 220">
+              <defs>
+                <linearGradient id="naspeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#F0632B" />
+                  <stop offset="100%" stopColor="#E8952C" />
+                </linearGradient>
+              </defs>
+              <circle className="bg-ring" cx="110" cy="110" r="100"></circle>
+              <circle className="spin-ring" cx="110" cy="110" r="86"></circle>
+              <circle
+                id="naspe-progress-ring"
+                className="progress-ring"
+                cx="110"
+                cy="110"
+                r="100"
+                style={{ strokeDasharray: '450 628.3' }}
+              ></circle>
+            </svg>
+            <div className="mascot-wrap">
+              <img src="/assets/naspe-mascot.png" alt="NASPE India mascot loading" />
+              <div className="mascot-shadow"></div>
+            </div>
+          </div>
+          <div className="loader-text">
+            <p className="loader-eyebrow">NASPE India</p>
+            <p className="loader-title">
+              Loading Amazing Kids of India<span className="dots"><span>.</span><span>.</span><span>.</span></span>
+            </p>
+            <div className="loader-bar-track" style={{ width: '120px', margin: '12px auto 0' }}>
+              <div className="loader-bar-fill" style={{ width: '75%' }}></div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -692,6 +744,7 @@ const AdminDashboard = () => {
                     <div style={{ overflowX: 'auto', width: '100%' }}><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                       <thead>
                         <tr style={{ backgroundColor: '#ffffff', color: '#64748b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                          <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Rank & Points</th>
                           <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Institution Details</th>
                           <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Principal Contact</th>
                           <th style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0' }}>Location</th>
@@ -703,6 +756,10 @@ const AdminDashboard = () => {
                         ) : (
                           filteredSchools.map(s => (
                             <tr key={s.id} onClick={() => handleViewSchool(s)} style={{ borderBottom: '1px solid #e2e8f0', cursor: 'pointer', transition: 'background-color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                            <td style={{ padding: '20px 30px', textAlign: 'center', width: '120px' }}>
+                              <div style={{ fontSize: '18px', fontWeight: 'bold', color: s.rank === 1 ? '#fbbf24' : s.rank === 2 ? '#94a3b8' : s.rank === 3 ? '#b45309' : '#0f172a' }}>#{s.rank}</div>
+                              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', fontWeight: 'bold' }}>{s.totalPoints?.toLocaleString()} pts</div>
+                            </td>
                             <td style={{ padding: '20px 30px', fontWeight: 'bold' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#eff6ff', color: '#3b82f6', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold' }}>

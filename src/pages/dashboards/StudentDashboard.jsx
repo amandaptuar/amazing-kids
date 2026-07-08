@@ -280,10 +280,42 @@ const StudentDashboard = () => {
 
   if (loading || dataLoading) {
     return (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: '#F7F6F2', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-        <div style={{ width: '60px', height: '60px', border: '5px solid #E3E1D8', borderTopColor: '#E7B740', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '20px' }}></div>
-        <h2 style={{ fontFamily: '"Space Grotesk", sans-serif', color: '#16203B', margin: 0, fontSize: '24px' }}>Loading Dashboard...</h2>
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      <div id="naspe-loader" style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffffff' }}>
+        <div className="loader-stage">
+          <div className="track-ring">
+            <svg viewBox="0 0 220 220">
+              <defs>
+                <linearGradient id="naspeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#F0632B" />
+                  <stop offset="100%" stopColor="#E8952C" />
+                </linearGradient>
+              </defs>
+              <circle className="bg-ring" cx="110" cy="110" r="100"></circle>
+              <circle className="spin-ring" cx="110" cy="110" r="86"></circle>
+              <circle
+                id="naspe-progress-ring"
+                className="progress-ring"
+                cx="110"
+                cy="110"
+                r="100"
+                style={{ strokeDasharray: '450 628.3' }}
+              ></circle>
+            </svg>
+            <div className="mascot-wrap">
+              <img src="/assets/naspe-mascot.png" alt="NASPE India mascot loading" />
+              <div className="mascot-shadow"></div>
+            </div>
+          </div>
+          <div className="loader-text">
+            <p className="loader-eyebrow">NASPE India</p>
+            <p className="loader-title">
+              Loading Amazing Kids of India<span className="dots"><span>.</span><span>.</span><span>.</span></span>
+            </p>
+            <div className="loader-bar-track" style={{ width: '120px', margin: '12px auto 0' }}>
+              <div className="loader-bar-fill" style={{ width: '75%' }}></div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -336,36 +368,21 @@ const StudentDashboard = () => {
       <div className="shell" style={{ marginTop: 0 }}>
         {/* PROFILE CARD */}
         <div className="profile-card">
-          <div className="avatar" style={{ position: 'relative', overflow: 'hidden', cursor: 'pointer' }} onClick={() => document.getElementById('avatarUpload').click()}>
+          <div className="avatar" style={{ position: 'relative', overflow: 'hidden' }}>
             {uploadingAvatar ? (
               <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#e2e8f0' }}>
                  <div style={{ width: '30px', height: '30px', border: '3px solid #cbd5e1', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
               </div>
             ) : studentData?.photo_url ? (
-              <>
-                <img src={studentData.photo_url} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <div className="avatar-overlay" style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', opacity: 0, transition: 'opacity 0.2s' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="32" height="32"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                </div>
-              </>
+              <img src={studentData.photo_url} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <>
-                {initials(displayName)}
-                <div className="avatar-overlay" style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', opacity: 0, transition: 'opacity 0.2s' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="32" height="32"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                </div>
-              </>
+              initials(displayName)
             )}
-            <input type="file" id="avatarUpload" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
-            <style>{`.avatar:hover .avatar-overlay { opacity: 1 !important; }`}</style>
           </div>
 
           <div className="profile-id-block">
             <div className="profile-name-row">
               <div className="profile-name">{displayName}</div>
-              <button className="btn-edit-inline" aria-label="Update name and address" onClick={() => setShowProfileModal(true)}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z" /></svg>
-              </button>
             </div>
             <div className="profile-meta-row">
               <span className="id-chip">{profile.custom_student_id}</span>
@@ -389,9 +406,6 @@ const StudentDashboard = () => {
               <span className="num">{calcAge(studentData?.dob)}</span>
               <span className="txt">Years</span>
             </div>
-            <button className="btn-edit-dob" aria-label="Update date of birth" onClick={() => setShowDobModal(true)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z" /></svg>
-            </button>
           </div>
         </div>
 
