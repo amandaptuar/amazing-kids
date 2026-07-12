@@ -1,0 +1,21 @@
+{
+  "name": "Amazing Kids of India",
+  "short_name": "Amazing Kids",
+  "description": "National Academy for Sports & Physical Education Ranking Competition",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#18191D",
+  "theme_color": "#E9A132",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

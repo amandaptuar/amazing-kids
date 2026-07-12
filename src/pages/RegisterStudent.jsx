@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import useSEO from '../hooks/useSEO';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerStudent } from '../services/authAPI';
 import { User, MapPin, Phone, Mail, Lock, Calendar, School, Gamepad2, ArrowRight, ChevronDown } from 'lucide-react';
@@ -9,6 +10,12 @@ import * as india from '../lib/indiaData';
 import Swal from 'sweetalert2';
 
 const RegisterStudent = () => {
+  useSEO({
+    title: 'Student Registration',
+    description: "Register your child for Amazing Kids of India ranking competitions.",
+    keywords: "register student, kids competition registration, youth sports signup",
+    url: "https://amazingkidsofindia.com/register/student"
+  });
   const [formData, setFormData] = useState({
     fullName: '', email: '', password: '', dob: '', gender: 'Male',
     parentName: '', state: '', district: '', address: '', schoolId: '', games: [],

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import useSEO from '../hooks/useSEO';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerSchool } from '../services/authAPI';
 import { Building, MapPin, Phone, Mail, Lock, ArrowRight, User, ChevronDown } from 'lucide-react';
@@ -8,6 +9,12 @@ import Swal from 'sweetalert2';
 import emailjs from '@emailjs/browser';
 
 const RegisterSchool = () => {
+  useSEO({
+    title: 'School Registration',
+    description: "Register your school with Amazing Kids of India for ranking competitions.",
+    keywords: "register school, school sports registration, NASPE school affiliation",
+    url: "https://amazingkidsofindia.com/register/school"
+  });
   const [formData, setFormData] = useState({
     schoolName: '', principalName: '', email: '', password: '', 
     state: '', district: '', address: ''

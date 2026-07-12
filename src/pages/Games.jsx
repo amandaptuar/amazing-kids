@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import useSEO from '../hooks/useSEO';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Target, Trophy, Play, RefreshCw, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -6,6 +7,12 @@ import { supabase } from '../lib/supabase';
 import { Link, Navigate } from 'react-router-dom';
 
 const Games = () => {
+  useSEO({
+    title: 'Interactive Games',
+    description: "Play interactive sports games and earn points for the Amazing Kids of India leaderboard.",
+    keywords: "kids sports games, earn points, amazing kids games",
+    url: "https://amazingkidsofindia.com/games"
+  });
   const { role, profile } = useAuth();
   const [gameState, setGameState] = useState('menu'); // menu, playing, finished
   const [score, setScore] = useState(0);

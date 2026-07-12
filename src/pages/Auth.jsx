@@ -1,8 +1,15 @@
 import React, { useState } from 'react';
+import useSEO from '../hooks/useSEO';
 import { useNavigate, Link } from 'react-router-dom';
 import { loginUser } from '../services/authAPI';
 
 const Auth = () => {
+  useSEO({
+    title: 'Login',
+    description: "Login to your Amazing Kids of India account.",
+    keywords: "login, amazing kids account, student dashboard login",
+    url: "https://amazingkidsofindia.com/auth"
+  });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);

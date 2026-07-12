@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import useSEO from '../hooks/useSEO';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Target, Gift, X, AlertCircle, ShoppingBag, Zap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -7,6 +8,12 @@ import Swal from 'sweetalert2';
 import { useNavigate } from 'react-router-dom';
 
 const Store = () => {
+  useSEO({
+    title: 'Official Store',
+    description: "Shop for official Amazing Kids of India merchandise and sports gear.",
+    keywords: "kids sports gear, amazing kids store, sports equipment",
+    url: "https://amazingkidsofindia.com/store"
+  });
   const { user, role, profile } = useAuth();
   const navigate = useNavigate();
   

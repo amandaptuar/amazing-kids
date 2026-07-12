@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Disallow admin and internal dashboard paths
+Disallow: /admin
+Disallow: /dashboard/
+Disallow: /certificate/
+
+Sitemap: https://amazingkidsofindia.com/sitemap.xml

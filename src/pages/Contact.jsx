@@ -1,8 +1,15 @@
 import React from 'react';
+import useSEO from '../hooks/useSEO';
 import { motion } from 'framer-motion';
 import { MapPin, Phone, Mail, Building } from 'lucide-react';
 
 const Contact = () => {
+  useSEO({
+    title: 'Contact Us',
+    description: "Get in touch with Amazing Kids of India for any inquiries or support.",
+    keywords: "contact amazing kids, support, NASPE india contact",
+    url: "https://amazingkidsofindia.com/contact"
+  });
   return (
     <main style={{ paddingTop: '80px', backgroundColor: 'var(--bg-light)', minHeight: '100vh' }}>
       

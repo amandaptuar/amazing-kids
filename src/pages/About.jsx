@@ -1,10 +1,17 @@
 import React from 'react';
+import useSEO from '../hooks/useSEO';
 import { Link } from 'react-router-dom';
 import { Play } from 'lucide-react';
 import { motion } from 'framer-motion';
 import './Home.css'; // Reuse the global Home styles
 
 const About = () => {
+  useSEO({
+    title: 'About Us',
+    description: "Learn more about NASPE INDIA and the Amazing Kids of India ranking competition platform.",
+    keywords: "about amazing kids, NASPE india, youth sports academy",
+    url: "https://amazingkidsofindia.com/about"
+  });
   return (
     <div className="home-wrapper" style={{ marginTop: '0', paddingTop: '80px' }}>
       

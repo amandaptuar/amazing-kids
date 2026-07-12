@@ -1,0 +1,17 @@
+Updates Made:
+
+1. Replaced Inline Styles in Home.jsx:
+   - Removed hardcoded inline styles from the "Get in touch" section on the Home page (Left-side info cards and Right-side form wrapper).
+   - These inline styles were preventing the CSS media queries from properly resizing the elements on smaller screens (mobile devices).
+
+2. Added Responsive CSS Classes in Home.css:
+   - Created `.contact-info-cards-wrapper`, `.contact-info-card`, `.contact-info-content`, `.contact-info-title`, and `.contact-info-text` to cleanly manage the styling of the left-side info cards.
+   - Moved the form wrapper's box-shadow to a new `.custom-contact-wrap` class.
+
+3. Updated Mobile View (`@media (max-width: 768px)`):
+   - Added rule for `.contact-info-card` to switch to `flex-direction: column` and `text-align: center`, making the cards stack beautifully on mobile devices.
+   - Added rule to reduce the font sizes (`.contact-info-text`) and padding on mobile screens.
+   - Since the inline `padding: 50px` was removed from the form wrapper (`.contact-wrap`), the mobile CSS which enforces `padding: 30px` now properly takes effect, ensuring the contact form is no longer squished on small devices.
+
+Result:
+The entire contact section on the home page is now fully responsive and will adapt gracefully to phones and tablets.

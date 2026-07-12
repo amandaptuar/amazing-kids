@@ -1161,7 +1161,7 @@ const AdminDashboard = () => {
 };
 
 // ... AdminLogin component remains identical to previous 
-const AdminLogin = ({ forceAdminLogin }) => {
+function AdminLogin({ forceAdminLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
@@ -1226,6 +1226,6 @@ const AdminLogin = ({ forceAdminLogin }) => {
       </motion.div>
     </div>
   );
-};
+}
 
 export default AdminDashboard;

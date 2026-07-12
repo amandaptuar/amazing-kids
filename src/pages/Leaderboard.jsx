@@ -1,10 +1,17 @@
 import React, { useEffect, useState } from 'react';
+import useSEO from '../hooks/useSEO';
 import { supabase } from '../lib/supabase';
 import { Trophy, Medal, Star, Flame, Crown, Building, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 
 const Leaderboard = () => {
+  useSEO({
+    title: 'Global Leaderboard',
+    description: "View the national points leaderboard for Amazing Kids of India ranking competitions.",
+    keywords: "kids leaderboard, sports ranking, amazing kids points",
+    url: "https://amazingkidsofindia.com/leaderboard"
+  });
   const [leaders, setLeaders] = useState([]);
   const [schoolLeaders, setSchoolLeaders] = useState([]);
   const [loading, setLoading] = useState(true);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import useSEO from '../hooks/useSEO';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { Calendar, MapPin, Trophy, Users, Clock, CheckCircle, AlertCircle, X } from 'lucide-react';
@@ -8,6 +9,12 @@ import Swal from 'sweetalert2';
 import emailjs from '@emailjs/browser';
 
 const Events = () => {
+  useSEO({
+    title: 'Events & Competitions',
+    description: "Browse and register for upcoming Amazing Kids of India ranking competitions and events.",
+    keywords: "kids sports events, youth competitions, amazing kids events",
+    url: "https://amazingkidsofindia.com/events"
+  });
   const { user, role, profile } = useAuth();
   const navigate = useNavigate();
   

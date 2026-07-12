@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import useSEO from '../hooks/useSEO';
 import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { programsData } from '../data/programsData';
@@ -134,6 +135,12 @@ const ProfileModal = ({ participant, metricName, onClose }) => {
 
 
 const Program = () => {
+  useSEO({
+    title: 'Our Programs',
+    description: "Discover our specialized programs including Youngest Fastest Athlete, Cyclist, Skater, and more.",
+    keywords: "kids sports programs, youngest athlete, fastest skater, fastest cyclist",
+    url: "https://amazingkidsofindia.com/programs"
+  });
   const { category } = useParams();
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
