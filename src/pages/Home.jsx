@@ -8,20 +8,20 @@ const heroSlides = [
   {
     image: '/assets/hero_athletics.png',
     subtitle: 'INDIA\'S FIRST RANKING COMPETITION',
-    title: <>Inventive and interested<br />in innovation</>,
+    title: <>journey towarsd olympic 2036<br />begins here</>,
     desc: <>NASPE INDIA National Academy for Sports & Physical Education.<br/>Preparing Kids at grassroot level for future.</>
   },
   {
     image: '/assets/hero_skating.png',
     subtitle: 'EMPOWERING FUTURE LEADERS',
-    title: <>Discover Your Child's<br />True Potential</>,
+    title: <>indias first ranking competioton<br />scientific ways profile system</>,
     desc: <>A unique platform for students aged 3 years to 10 years.<br/>Recognized and awarded a ranking competition.</>
   },
   {
     image: '/assets/hero_cycling.png',
-    subtitle: 'SUPPORT OUR NATION - INDIA',
-    title: <>Excellence in<br />Early Education</>,
-    desc: <>We urge you to support and help us build a perfect athlete<br/>for our Nation – India.</>
+    subtitle: 'National Academy for Sports & Physical Education* India',
+    title: <>Dedicated to searching of<br />young athletes</>,
+    desc: <>Every district, taluka, and state.</>
   }
 ];
 
@@ -82,18 +82,22 @@ const Home = () => {
       {/* Animated Text */}
       <div className="moving-text-wrap">
         <div className="moving-text">
+          <span>* Register Now School & Club</span>
           <span>* India's First Ranking Competition</span>
           <span>* Amazing Kids of India</span>
           <span>* NASPE INDIA</span>
           <span>* National Academy for Sports & Physical Education</span>
+          <span>* Register Now School & Club</span>
           <span>* India's First Ranking Competition</span>
           <span>* Amazing Kids of India</span>
         </div>
         <div className="moving-text">
+          <span>* Register Now School & Club</span>
           <span>* India's First Ranking Competition</span>
           <span>* Amazing Kids of India</span>
           <span>* NASPE INDIA</span>
           <span>* National Academy for Sports & Physical Education</span>
+          <span>* Register Now School & Club</span>
           <span>* India's First Ranking Competition</span>
           <span>* Amazing Kids of India</span>
         </div>
@@ -105,8 +109,8 @@ const Home = () => {
         <div className="container-custom">
           <div className="section-heading d-flex justify-content-between align-items-end flex-wrap gap-4">
             <div>
-              <h3 className="text-accent">Our Programs List</h3>
-              <h2>We Provide The Solution<br />For Our Kids</h2>
+              <h3 className="text-accent">Our Programs</h3>
+              <h2>Best Program For<br />Grassroot Level</h2>
             </div>
           </div>
           
@@ -536,7 +540,7 @@ const Home = () => {
             {/* Right: Contact Form */}
             <div className="contact-wrap custom-contact-wrap">
               <div style={{ marginBottom: '30px', textAlign: 'center' }}>
-                <h2 style={{ color: '#18191D', fontSize: '28px', fontWeight: 800, margin: '0 0 8px' }}>Contact Us</h2>
+                <h2 style={{ color: '#18191D', fontSize: '28px', fontWeight: 800, margin: '0 0 8px' }}>Join To Become An Affiliate Member</h2>
                 <p style={{ color: '#888', margin: 0, fontSize: '15px' }}>We'd love to hear from you</p>
               </div>
               <form>

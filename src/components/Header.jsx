@@ -49,7 +49,7 @@ const Header = () => {
     },
     { name: 'Event', href: '/events' },
     { name: 'Goodies Store', href: '/store' },
-    { name: 'Contact Us', href: '/contact' }
+    { name: 'Become an Affiliate', href: '/contact' }
   ];
 
   const [activeDropdown, setActiveDropdown] = useState(null);

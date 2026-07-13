@@ -63,7 +63,7 @@ const Footer = () => {
                 { name: 'About Us', path: '/about' },
                 { name: 'Programs', path: '/program/athlete' },
                 { name: 'Event List', path: '/events' },
-                { name: 'Contact Us', path: '/contact' }
+                { name: 'Become an Affiliate', path: '/contact' }
               ].map(link => (
                 <li key={link.name}>
                   <Link 
@@ -105,7 +105,7 @@ const Footer = () => {
 
           {/* Column 4: Contact Us */}
           <div>
-            <h4 style={{ color: 'var(--primary-dark)', fontSize: '20px', marginBottom: '25px', fontFamily: 'var(--font-heading)' }}>Contact Us</h4>
+            <h4 style={{ color: 'var(--primary-dark)', fontSize: '20px', marginBottom: '25px', fontFamily: 'var(--font-heading)' }}>Become an Affiliate</h4>
             <div style={{ color: 'var(--text-light)', fontSize: '15px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
               
               <div style={{ display: 'flex', gap: '12px' }}>
